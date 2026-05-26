@@ -1,993 +1,475 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>贷款计算器（等额本息）</title>
-<!-- <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"> -->
-<style>
-  :root {
-    --bg: #f5f7fa;
-    --bg-secondary: #ffffff;
-    --card-left: #ffffff;
-    --card-right: #ffffff;
-    --fg: #2d3748;
-    --fg-muted: #718096;
-    --accent: #4299e1;
-    --accent-glow: rgba(66, 153, 225, 0.15);
-    --accent-soft: rgba(66, 153, 225, 0.08);
-    --border: rgba(66, 153, 225, 0.12);
-    --border-strong: rgba(66, 153, 225, 0.25);
-    --success: #48bb78;
-    --danger: #f56565;
-    --radius: 14px;
-    --radius-sm: 8px;
-  }
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    font-family: 'Noto Sans SC', sans-serif;
-    background: var(--bg);
-    color: var(--fg);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow-x: hidden;
-    position: relative;
-  }
-
-  /* 背景装饰 */
-  body::before {
-    content: '';
-    position: fixed;
-    top: -40%;
-    left: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(66,153,225,0.06) 0%, transparent 70%);
-    border-radius: 50%;
-    pointer-events: none;
-    animation: floatBlob 12s ease-in-out infinite;
-  }
-
-  body::after {
-    content: '';
-    position: fixed;
-    bottom: -30%;
-    right: -15%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(66,153,225,0.04) 0%, transparent 70%);
-    border-radius: 50%;
-    pointer-events: none;
-    animation: floatBlob 15s ease-in-out infinite reverse;
-  }
-
-  @keyframes floatBlob {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(40px, -30px) scale(1.05); }
-    66% { transform: translate(-20px, 20px) scale(0.95); }
-  }
-
-  /* 网格背景 */
-  .grid-bg {
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(66,153,225,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(66,153,225,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* 页面标题 */
-  .page-header {
-    text-align: center;
-    margin-bottom: 36px;
-    position: relative;
-    z-index: 1;
-  }
-
-  .page-header h1 {
-    font-size: 32px;
-    font-weight: 900;
-    letter-spacing: -0.5px;
-    color: var(--fg);
-    margin-bottom: 8px;
-  }
-
-  .page-header h1 span {
-    color: var(--accent);
-    position: relative;
-  }
-
-  .page-header h1 span::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--accent);
-    border-radius: 2px;
-    opacity: 0.5;
-  }
-
-  .page-header p {
-    font-size: 14px;
-    color: var(--fg-muted);
-    font-weight: 300;
-  }
-
-  /* 主容器 - 左右布局 */
-  .calculator-container {
-    display: flex;
-    gap: 24px;
-    width: 1100px;
-    max-width: 95vw;
-    position: relative;
-    z-index: 1;
-    align-items: stretch;
-  }
-
-  /* 左侧面板 */
-  .panel-left {
-    flex: 0 0 380px;
-    background: var(--card-left);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 32px 28px;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  }
-
-  .panel-left::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), rgba(66,153,225,0.3), transparent);
-  }
-
-  .panel-title {
-    font-size: 23px;
-    font-weight: 700;
-    color: var(--fg);
-    margin-bottom: 28px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .panel-title i {
-    color: var(--accent);
-    font-size: 18px;
-  }
-
-  /* 表单组 */
-  .form-group {
-    margin-bottom: 24px;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--fg-muted);
-    margin-bottom: 8px;
-    letter-spacing: 0.3px;
-  }
-
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .input-wrapper i {
-    position: absolute;
-    left: 14px;
-    color: var(--fg-muted);
-    font-size: 14px;
-    transition: color 0.3s;
-    pointer-events: none;
-  }
-
-  .form-input {
-    width: 100%;
-    height: 48px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0 14px 0 40px;
-    font-size: 20px;
-    font-family: 'DM Mono', monospace;
-    color: var(--fg);
-    outline: none;
-    transition: all 0.3s ease;
-  }
-
-  .form-input::placeholder {
-    color: rgba(113, 128, 150, 0.5);
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 15px;
-  }
-
-  .form-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-glow), 0 0 20px var(--accent-glow);
-  }
-
-  .form-input:focus + i,
-  .form-input:focus ~ i {
-    color: var(--accent);
-  }
-
-  .input-wrapper:focus-within i {
-    color: var(--accent);
-  }
-
-  .input-suffix {
-    position: absolute;
-    right: 14px;
-    font-size: 16px;
-    color: var(--fg-muted);
-    font-weight: 500;
-    pointer-events: none;
-  }
-
-  /* 大写金额 */
-  .chinese-amount {
-    margin-top: 10px;
-    min-height: 28px;
-    padding: 6px 12px;
-    background: var(--accent-soft);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 15px;
-    color: var(--accent);
-    font-weight: 500;
-    letter-spacing: 1px;
-    opacity: 0;
-    transform: translateY(-4px);
-    transition: all 0.35s ease;
-  }
-
-  .chinese-amount.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* 计算按钮 */
-  .btn-calculate {
-    width: 100%;
-    height: 52px;
-    margin-top: 8px;
-    background: linear-gradient(135deg, var(--accent), #2b6cb0);
-    border: none;
-    border-radius: var(--radius-sm);
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 700;
-    font-family: 'Noto Sans SC', sans-serif;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(66,153,225,0.3);
-  }
-
-  .btn-calculate::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
-    transform: translateX(-100%);
-    transition: transform 0.6s;
-  }
-
-  .btn-calculate:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(66,153,225,0.4);
-  }
-
-  .btn-calculate:hover::before {
-    transform: translateX(100%);
-  }
-
-  .btn-calculate:active {
-    transform: translateY(0);
-  }
-
-  /* 提示信息 */
-  .note-text {
-    margin-top: auto;
-    padding-top: 20px;
-    font-size: 12px;
-    color: var(--fg-muted);
-    line-height: 1.7;
-    border-top: 1px solid var(--border);
-  }
-
-  .note-text i {
-    color: var(--accent);
-    margin-right: 4px;
-  }
-
-  /* 右侧面板 */
-  .panel-right {
-    flex: 1;
-    background: var(--card-right);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  }
-
-  .panel-right::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, rgba(66,153,225,0.3), var(--accent), rgba(66,153,225,0.3), transparent);
-  }
-
-  .panel-right-header {
-    padding: 24px 28px 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .panel-right-header .panel-title {
-    margin-bottom: 0;
-  }
-
-  /* 汇总卡片 - 2x2网格布局 */
-  .summary-row {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, auto);
-    gap: 16px;
-    padding: 20px 28px;
-  }
-
-  .summary-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 16px;
-    text-align: center;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.4s ease;
-  }
-
-  .summary-card.show {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .summary-card:nth-child(1) {
-    transition-delay: 0.08s;
-  }
-
-  .summary-card:nth-child(2) {
-    transition-delay: 0.16s;
-  }
-
-  .summary-card:nth-child(3) {
-    transition-delay: 0.24s;
-  }
-
-  .summary-card:nth-child(4) {
-    transition-delay: 0.32s;
-  }
-
-  .summary-label {
-    font-size: 15px;
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-  }
-
-  .summary-value {
-    font-family: 'DM Mono', monospace;
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--fg);
-    white-space: nowrap;
-  }
-
-  .summary-value.highlight {
-    color: var(--accent);
-  }
-
-  .summary-value.danger {
-    color: var(--danger);
-  }
-
-  .summary-value.success {
-    color: var(--success);
-  }
-
-  /* 表格区域 - 固定高度，支持独立滚动 */
-  .table-wrapper {
-    flex: 1;
-    padding: 0 28px 24px;
-    overflow-y: auto;
-    max-height: 400px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-    position: relative;
-  }
-
-  .table-wrapper::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  .table-wrapper::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .table-wrapper::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: 3px;
-  }
-
-  /* 空状态 */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 300px;
-    color: var(--fg-muted);
-    gap: 16px;
-  }
-
-  .empty-state i {
-    font-size: 48px;
-    opacity: 0.2;
-    animation: emptyPulse 3s ease-in-out infinite;
-  }
-
-  @keyframes emptyPulse {
-    0%, 100% { opacity: 0.15; transform: scale(1); }
-    50% { opacity: 0.25; transform: scale(1.05); }
-  }
-
-  .empty-state span {
-    font-size: 14px;
-    font-weight: 300;
-  }
-
-  /* 表格 */
-  .result-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 18px;
-  }
-
-  .result-table thead th {
-    position: sticky;
-    top: 0;
-    background: var(--bg-secondary);
-    padding: 12px 16px;
-    text-align: left;
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    border-bottom: 1px solid var(--border);
-    z-index: 2;
-  }
-
-  .result-table thead th:first-child {
-    border-radius: var(--radius-sm) 0 0 0;
-  }
-
-  .result-table thead th:last-child {
-    border-radius: 0 var(--radius-sm) 0 0;
-    text-align: center;
-  }
-
-  .result-table thead th:nth-child(2),
-  .result-table thead th:nth-child(3) {
-    text-align: center;
-  }
-
-  .result-table tbody tr {
-    transition: background 0.2s;
-  }
-
-  .result-table tbody tr:hover {
-    background: var(--accent-soft);
-  }
-
-  .result-table tbody td {
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(66,153,225,0.05);
-    font-family: 'DM Mono', monospace;
-    font-size: 20px;
-  }
-
-  .result-table tbody td:first-child {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-weight: 500;
-    color: var(--fg);
-  }
-
-  .result-table tbody td:nth-child(2) {
-    text-align: center;
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  .result-table tbody td:nth-child(3) {
-    text-align: center;
-    color: var(--danger);
-  }
-
-  .result-table tbody td:nth-child(4) {
-    text-align: right;
-    color: var(--fg);
-    font-weight: 500;
-  }
-
-  .result-table tbody tr {
-    opacity: 0;
-    animation: rowFadeIn 0.35s ease forwards;
-  }
-
-  @keyframes rowFadeIn {
-    from { opacity: 0; transform: translateX(-8px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  /* 进度条装饰 */
-  .bar-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .mini-bar {
-    flex: 1;
-    height: 4px;
-    background: rgba(66,153,225,0.1);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .mini-bar-fill {
-    height: 100%;
-    background: var(--accent);
-    border-radius: 2px;
-    transition: width 0.6s ease;
-  }
-
-  /* Toast 通知 */
-  .toast {
-    position: fixed;
-    top: 24px;
-    right: 24px;
-    padding: 14px 20px;
-    background: var(--card-left);
-    border: 1px solid var(--danger);
-    border-radius: var(--radius-sm);
-    color: var(--danger);
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 999;
-    transform: translateX(120%);
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-  }
-
-  .toast.show {
-    transform: translateX(0);
-  }
-
-  /* 响应式 */
-  @media (max-width: 860px) {
-    .calculator-container {
-      flex-direction: column;
-      width: 100%;
-      max-width: 500px;
-    }
-
-    .panel-left {
-      flex: none;
-    }
-
-    .summary-row {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .page-header h1 {
-      font-size: 24px;
-    }
-  }
-
-  /* 减少动画偏好 */
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学学工具箱</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f4f5f7;
+            --card: #ffffff;
+            --border: #e2e5ea;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --accent: #0ea5e9;
+            --accent-light: #e0f2fe;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        header {
+            text-align: center;
+            padding: 64px 24px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+        .logo-row {
+            display: inline-flex; align-items: center; gap: 14px; margin-bottom: 12px;
+        }
+        .logo-icon {
+            width: 50px; height: 50px; border-radius: 14px;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; color: #fff; font-weight: 900;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+        }
+        .logo-title {
+            font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em;
+            color: var(--text);
+        }
+        .subtitle {
+            color: var(--muted); font-size: 1rem; font-weight: 400; margin-top: 4px;
+        }
+
+        .search-wrap {
+            max-width: 480px; margin: 24px auto 0; position: relative;
+        }
+        .search-input {
+            width: 100%; padding: 14px 20px 14px 48px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 12px; color: var(--text); font-size: 0.95rem;
+            font-family: inherit; outline: none; transition: all 0.2s;
+        }
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+        .search-icon {
+            position: absolute; left: 17px; top: 50%; transform: translateY(-50%);
+            color: var(--muted); font-size: 0.95rem;
+        }
+
+        .cat-bar {
+            display: flex; justify-content: center; gap: 10px;
+            padding: 0 24px 32px; flex-wrap: wrap;
+        }
+        .cat-btn {
+            padding: 8px 20px; border-radius: 100px;
+            border: 1px solid var(--border); background: var(--card);
+            color: var(--muted); font-size: 0.85rem; font-weight: 500;
+            font-family: inherit; cursor: pointer; transition: all 0.2s;
+        }
+        .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .cat-btn.active {
+            background: var(--accent); border-color: var(--accent);
+            color: #fff; font-weight: 600;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px; padding: 0 40px 80px;
+            max-width: 1280px; margin: 0 auto;
+        }
+
+        .tool-card {
+            display: block; text-decoration: none; color: inherit;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); overflow: hidden;
+            transition: all 0.25s ease-out;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .tool-card:hover {
+            transform: translateY(-6px);
+            border-color: color-mix(in srgb, var(--tool-color) 50%, var(--border));
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        }
+
+        .tool-thumb {
+            position: relative; width: 100%;
+            aspect-ratio: 16 / 9.5; overflow: hidden;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+        .thumb-titlebar {
+            height: 24px; display: flex; align-items: center;
+            padding: 0 10px; gap: 5px;
+            background: #f1f5f9; border-bottom: 1px solid #e2e8f0;
+        }
+        .tb-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .tb-dot-r { background: #ff5f57; }
+        .tb-dot-y { background: #febc2e; }
+        .tb-dot-g { background: #28c840; }
+        .tb-title { margin-left: 8px; font-size: 0.6rem; color: #94a3b8; font-family: monospace; }
+
+        .thumb-body {
+            position: relative; height: calc(100% - 24px);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+
+        .tool-card:hover .thumb-body { background: #ffffff; }
+        .tool-card:hover .thumb-icon { transform: scale(1.1); }
+        .thumb-icon {
+            font-size: 2.2rem; transition: transform 0.3s ease;
+            filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--tool-color) 30%, transparent));
+        }
+
+        .sim-btns {
+            display: grid; grid-template-columns: repeat(4,1fr); gap: 5px;
+            position: absolute; bottom: 14px; left: 14px; right: 14px;
+        }
+        .sim-btn {
+            height: 16px; border-radius: 4px;
+            /* 使用 CSS 变量混合颜色 */
+            background: color-mix(in srgb, var(--tool-color) 15%, #f1f5f9);
+        }
+        .sim-lines { display: flex; flex-direction: column; gap: 6px; align-items: center; width: 70%; }
+        .sim-line { height: 4px; border-radius: 2px; background: #e2e8f0; }
+        .sim-bars {
+            display: flex; align-items: flex-end; gap: 6px;
+            position: absolute; bottom: 14px; left: 18px; right: 18px; height: 50px;
+        }
+        .sim-bar {
+            flex: 1; border-radius: 3px 3px 0 0;
+            background: color-mix(in srgb, var(--tool-color) 25%, #f1f5f9);
+        }
+        .sim-circle {
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid color-mix(in srgb, var(--tool-color) 30%, #e2e8f0);
+            position: relative;
+        }
+        .sim-circle-fill {
+            position: absolute; inset: 3px; border-radius: 50%;
+            background: conic-gradient(var(--tool-color) 0deg, var(--tool-color) 260deg, transparent 260deg);
+            opacity: 0.3;
+        }
+        .sim-cards { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+        .sim-card-item {
+            position: absolute; width: 55%; height: 32px;
+            border-radius: 6px; background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .sim-axes { position: absolute; bottom: 14px; left: 18px; right: 18px; height: 55px; }
+        .sim-axis-x { position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: #cbd5e1; }
+        .sim-axis-y { position: absolute; bottom: 0; left: 0; top: 0; width: 1px; background: #cbd5e1; }
+        .sim-tags { display: flex; flex-wrap: wrap; gap: 5px; position: absolute; bottom: 12px; left: 12px; right: 12px; justify-content: center; }
+        .sim-tag { padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+        .sim-tag-active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+        .sim-inputs { position: absolute; bottom: 14px; left: 14px; right: 14px; display: flex; align-items: center; gap: 8px; }
+        .sim-input { flex: 1; height: 16px; border-radius: 4px; background: #f1f5f9; border: 1px solid #e2e8f0; }
+        .sim-arrow { color: #cbd5e1; font-size: 0.7rem; }
+
+        .tool-info { padding: 18px 22px 20px; }
+        .tool-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .tool-badge {
+            font-size: 0.6rem; padding: 2px 8px; border-radius: 6px; font-weight: 600;
+            background: var(--accent-light); color: var(--accent);
+        }
+        .tool-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+        .tool-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9;
+        }
+        .tool-cat { font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+        .tool-go {
+            font-size: 0.8rem; font-weight: 600; color: var(--accent);
+            display: flex; align-items: center; gap: 4px; transition: gap 0.2s;
+        }
+        .tool-card:hover .tool-go { gap: 8px; }
+
+        .thumb-img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 0; transition: transform 0.3s;
+        }
+        .tool-card:hover .thumb-img { transform: scale(1.03); }
+
+        .no-results { grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: var(--muted); }
+        .no-results i { font-size: 2.5rem; margin-bottom: 16px; display: block; opacity: 0.3; }
+
+        footer { text-align: center; padding: 32px 20px; color: #94a3b8; font-size: 0.8rem; }
+
+        @media (max-width: 768px) {
+            .logo-title { font-size: 2rem; }
+            .tools-grid { padding: 0 16px 60px; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+            header { padding: 48px 16px 20px; }
+        }
+        @media (max-width: 480px) { .tools-grid { grid-template-columns: 1fr; } }
+        @media (prefers-reduced-motion: reduce) { .tool-card:hover { transform: none; } }
+    </style>
 </head>
 <body>
 
-<div class="grid-bg"></div>
+    <header>
+        <div class="logo-row">
+            <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+            <h1 class="logo-title">数学工具箱</h1>
+        </div>
+        <p class="subtitle">为课堂而生的交互式小工具集合</p>
+        <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索工具名称或描述..." aria-label="搜索工具">
+        </div>
+    </header>
 
-<header class="page-header">
-  <h1>贷款计算器<span>（等额本息）</span></h1>
-  <p>快速计算不同还款年限下的月供、利息与总还款额</p>
-</header>
+    <nav class="cat-bar" id="catBar" aria-label="工具分类筛选"></nav>
+    <main class="tools-grid" id="toolsGrid"></main>
+    <footer>数学工具箱 · 持续更新中 · 点击卡片即可使用</footer>
 
-<main class="calculator-container">
-  <!-- 左侧：输入面板 -->
-  <section class="panel-left" aria-label="贷款参数输入">
-    <div class="panel-title">
-      <i class="fa-solid fa-sliders"></i>
-      贷款参数
-    </div>
+    <script>
+        const tools = [
+            {
+                name: '贷款计算器',
+                desc: '输入贷款金额和年利率，显示不同年限的月供和利息总额（等额本息）',
+                category: '数学',
+                url: 'toolshtml/dkjsq.html',
+                color: '#10b981',
+                icon: 'fa-solid fa-calculator',
+                thumbType: 'grid',
+                image:'images/dkjsq.png',
+                isNew: true
+            },
+            {
+                name: '几何画板',
+                desc: '交互式几何图形绘制，支持拖拽、测量与变换',
+                category: '数学',
+                url: '#',
+                color: '#f97316',
+                icon: 'fa-solid fa-draw-polygon',
+                thumbType: 'canvas',
+                isNew: true
+            },
+            {
+                name: '函数图像',
+                desc: '输入函数表达式，实时绘制函数曲线与特征分析',
+                category: '数学',
+                url: '#',
+                color: '#ef4444',
+                icon: 'fa-solid fa-chart-line',
+                thumbType: 'chart',
+                isNew: false
+            },
+            {
+                name: '随机点名',
+                desc: '导入学生名单，课堂随机抽取，支持不重复模式',
+                category: '课堂',
+                url: '#',
+                color: '#eab308',
+                icon: 'fa-solid fa-dice',
+                thumbType: 'list',
+                isNew: true
+            },
+            {
+                name: '成绩统计',
+                desc: '快速录入成绩，自动计算均分、排名与分布',
+                category: '课堂',
+                url: '#',
+                color: '#0ea5e9',
+                icon: 'fa-solid fa-chart-column',
+                thumbType: 'bars',
+                isNew: false
+            },
+            {
+                name: '计时秒表',
+                desc: '课堂倒计时与正计时秒表，支持自定义时长',
+                category: '课堂',
+                url: '#',
+                color: '#ec4899',
+                icon: 'fa-solid fa-stopwatch',
+                thumbType: 'circle',
+                isNew: false
+            },
+            {
+                name: '单位换算',
+                desc: '长度、面积、体积、质量等单位快速换算',
+                category: '数学',
+                url: '#',
+                color: '#84cc16',
+                icon: 'fa-solid fa-right-left',
+                thumbType: 'converter',
+                isNew: false
+            },
+            {
+                name: '公式手册',
+                desc: '初高中常用数学公式速查，支持分类检索',
+                category: '数学',
+                url: '#',
+                color: '#8b5cf6',
+                icon: 'fa-solid fa-book-open',
+                thumbType: 'cards',
+                isNew: false
+            }
+        ];
 
-    <div class="form-group">
-      <label class="form-label" for="loanAmount">贷款金额</label>
-      <div class="input-wrapper">
-        <i class="fa-solid fa-coins"></i>
-        <input type="text" id="loanAmount" class="form-input" placeholder="请输入贷款金额" inputmode="decimal" aria-describedby="chineseAmount">
-        <span class="input-suffix">元</span>
-      </div>
-      <div class="chinese-amount" id="chineseAmount" aria-live="polite"></div>
-    </div>
+        function buildThumbHTML(tool) {
+            const c = tool.color;
+            let bodyContent = '';
 
-    <div class="form-group">
-      <label class="form-label" for="interestRate">年利率</label>
-      <div class="input-wrapper">
-        <i class="fa-solid fa-percent"></i>
-        <input type="text" id="interestRate" class="form-input" placeholder="请输入年利率" inputmode="decimal">
-        <span class="input-suffix">%</span>
-      </div>
-    </div>
+            // 优先使用真实截图
+            if (tool.image) {
+                return `
+                    <div class="thumb-titlebar">
+                        <div class="tb-dot tb-dot-r"></div><div class="tb-dot tb-dot-y"></div><div class="tb-dot tb-dot-g"></div>
+                        <span class="tb-title">${tool.name}</span>
+                    </div>
+                    <div class="thumb-body" style="padding:0;">
+                        <img src="${tool.image}" alt="${tool.name}" class="thumb-img">
+                    </div>`;
+            }
 
-    <button class="btn-calculate" id="btnCalculate" aria-label="开始计算">
-      <i class="fa-solid fa-calculator"></i>
-      开始计算
-    </button>
+            switch (tool.thumbType) {
+                case 'grid':
+                    bodyContent = `
+                        <div style="text-align:center; z-index:1; margin-bottom:8px;">
+                            <i class="${tool.icon} thumb-icon" style="color:${c}"></i>
+                        </div>
+                        <div class="sim-btns">
+                            ${Array(8).fill('').map(() => `<div class="sim-btn"></div>`).join('')}
+                        </div>`;
+                    break;
+                case 'canvas':
+                    bodyContent = `
+                        <svg width="80" height="60" viewBox="0 0 80 60" style="opacity:0.5; z-index:1;">
+                            <polygon points="40,8 72,52 8,52" fill="none" stroke="${c}" stroke-width="2"/>
+                            <circle cx="40" cy="35" r="18" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="4,4"/>
+                        </svg>`;
+                    break;
+                case 'chart':
+                    bodyContent = `
+                        <div class="sim-axes">
+                            <div class="sim-axis-x"></div><div class="sim-axis-y"></div>
+                            <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:0.6" viewBox="0 0 200 55" preserveAspectRatio="none">
+                                <path d="M0,50 C30,48 50,10 80,15 C110,20 130,45 160,30 C180,20 195,25 200,22" fill="none" stroke="${c}" stroke-width="2.5"/>
+                            </svg>
+                        </div>`;
+                    break;
+                case 'list':
+                    const names = ['张三','李四','王五','赵六','孙七','周八','吴九','郑十'];
+                    bodyContent = `
+                        <div class="sim-tags">
+                            ${names.map((n, i) => `<div class="sim-tag${i===3?' sim-tag-active':''}">${n}</div>`).join('')}
+                        </div>`;
+                    break;
+                case 'bars':
+                    const heights = [60, 85, 45, 90, 70, 55, 80];
+                    bodyContent = `<div class="sim-bars">${heights.map(h => `<div class="sim-bar" style="height:${h}%"></div>`).join('')}</div>`;
+                    break;
+                case 'circle':
+                    bodyContent = `
+                        <div class="sim-circle">
+                            <div class="sim-circle-fill"></div>
+                        </div>`;
+                    break;
+                case 'converter':
+                    bodyContent = `
+                        <div class="sim-inputs">
+                            <div class="sim-input"></div>
+                            <div class="sim-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="sim-input"></div>
+                        </div>`;
+                    break;
+                case 'cards':
+                    bodyContent = `
+                        <div class="sim-cards">
+                            <div class="sim-card-item" style="transform:rotate(-3deg) translateY(4px); z-index:1;"></div>
+                            <div class="sim-card-item" style="transform:rotate(1deg) translateY(-2px); z-index:2;"></div>
+                            <div class="sim-card-item" style="transform:rotate(-1deg) translateY(-8px); z-index:3; display:flex; align-items:center; justify-content:center;">
+                                <i class="${tool.icon}" style="color:${c}; font-size:0.9rem; opacity:0.5;"></i>
+                            </div>
+                        </div>`;
+                    break;
+                default:
+                    bodyContent = `<i class="${tool.icon} thumb-icon" style="color:${c}"></i>`;
+            }
 
-    <div class="note-text">
-      <i class="fa-solid fa-circle-info"></i>
-      等额本息是指每月还款金额相同，包含本金和利息。
-    </div>
-  </section>
-
-  <!-- 右侧：结果面板 -->
-  <section class="panel-right" aria-label="计算结果">
-    <div class="panel-right-header">
-      <div class="panel-title">
-        <i class="fa-solid fa-chart-column"></i>
-        计算结果
-      </div>
-    </div>
-
-    <!-- 汇总卡片 - 2x2网格布局 -->
-    <!-- <div class="summary-row" id="summaryRow" style="display: none;">
-      <div class="summary-card" id="summaryCard1">
-        <div class="summary-label">贷款金额</div>
-        <div class="summary-value highlight" id="summaryAmount">--</div>
-      </div>
-      <div class="summary-card" id="summaryCard2">
-        <div class="summary-label">最低月供</div>
-        <div class="summary-value" id="summaryMinMonth">--</div>
-      </div>
-      <div class="summary-card" id="summaryCard3">
-        <div class="summary-label">最高月供</div>
-        <div class="summary-value danger" id="summaryMaxMonth">--</div>
-      </div>
-      <div class="summary-card" id="summaryCard4">
-        <div class="summary-label">最低总利息</div>
-        <div class="summary-value success" id="summaryMinInterest">--</div>
-      </div>
-    </div> -->
-
-    <!-- 表格 / 空状态 -->
-    <div class="table-wrapper" id="tableWrapper">
-      <div class="empty-state" id="emptyState">
-        <i class="fa-solid fa-table"></i>
-        <span>输入参数后点击计算查看结果</span>
-      </div>
-      <table class="result-table" id="resultTable" style="display: none;">
-        <thead>
-          <tr>
-            <th>还款年限</th>
-            <th>每月还款金额</th>
-            <th>总利息</th>
-          </tr>
-        </thead>
-        <tbody id="resultBody"></tbody>
-      </table>
-    </div>
-  </section>
-</main>
-
-<!-- Toast 通知 -->
-<div class="toast" id="toast" role="alert">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  <span id="toastMsg"></span>
-</div>
-
-<script>
-  // ========== 工具函数 ==========
-
-  /** 数字转大写中文金额 */
-  function toChineseAmount(num) {
-    if (isNaN(num) || num === 0) return '';
-    const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
-    const units = ['', '拾', '佰', '仟'];
-    const bigUnits = ['', '万', '亿'];
-
-    const intPart = Math.floor(num);
-    const decPart = Math.round((num - intPart) * 100);
-    const jiao = Math.floor(decPart / 10);
-    const fen = decPart % 10;
-
-    let result = '';
-
-    if (intPart > 0) {
-      const str = String(intPart);
-      const len = str.length;
-      let zeroFlag = false;
-
-      for (let i = 0; i < len; i++) {
-        const d = parseInt(str[i]);
-        const pos = len - 1 - i;
-        const unitIdx = pos % 4;
-        const bigIdx = Math.floor(pos / 4);
-
-        if (d === 0) {
-          zeroFlag = true;
-          if (unitIdx === 0 && bigIdx > 0) {
-            result += bigUnits[bigIdx];
-            zeroFlag = false;
-          }
-        } else {
-          if (zeroFlag) {
-            result += '零';
-            zeroFlag = false;
-          }
-          result += digits[d] + units[unitIdx];
-          if (unitIdx === 0 && bigIdx > 0) {
-            result += bigUnits[bigIdx];
-          }
+            return `
+                <div class="thumb-titlebar">
+                    <div class="tb-dot tb-dot-r"></div><div class="tb-dot tb-dot-y"></div><div class="tb-dot tb-dot-g"></div>
+                    <span class="tb-title">${tool.name}</span>
+                </div>
+                <div class="thumb-body">
+                    ${bodyContent}
+                </div>`;
         }
-      }
-      result += '元';
-    }
 
-    if (jiao > 0) {
-      result += digits[jiao] + '角';
-    }
-    if (fen > 0) {
-      result += digits[fen] + '分';
-    }
-    if (jiao === 0 && fen === 0) {
-      result += '整';
-    }
+        const grid = document.getElementById('toolsGrid');
+        const catBar = document.getElementById('catBar');
+        const searchInput = document.getElementById('searchInput');
+        let currentCat = '全部';
+        const categories = ['全部', ...new Set(tools.map(t => t.category))];
 
-    return result;
-  }
+        catBar.innerHTML = categories.map(cat => {
+            const count = cat === '全部' ? tools.length : tools.filter(t => t.category === cat).length;
+            return `<button class="cat-btn${cat === '全部' ? ' active' : ''}" data-cat="${cat}">${cat} (${count})</button>`;
+        }).join('');
 
-  /** 格式化金额（千分位，保留2位小数） */
-  function formatMoney(num) {
-    return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+        catBar.addEventListener('click', e => {
+            const btn = e.target.closest('.cat-btn');
+            if (!btn) return;
+            currentCat = btn.dataset.cat;
+            catBar.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === currentCat));
+            renderCards();
+        });
 
-  /** 显示 toast 通知 */
-  function showToast(msg) {
-    const toast = document.getElementById('toast');
-    const toastMsg = document.getElementById('toastMsg');
-    toastMsg.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2800);
-  }
+        searchInput.addEventListener('input', renderCards);
 
-  // ========== 核心计算 ==========
+        function renderCards() {
+            const query = searchInput.value.trim().toLowerCase();
+            let filtered = currentCat === '全部' ? tools : tools.filter(t => t.category === currentCat);
+            if (query) filtered = filtered.filter(t => t.name.toLowerCase().includes(query) || t.desc.toLowerCase().includes(query) || t.category.toLowerCase().includes(query));
 
-  /**
-   * 等额本息月供公式：
-   * M = P × r × (1+r)^n / ((1+r)^n - 1)
-   * P = 贷款本金, r = 月利率, n = 还款月数
-   */
-  function calcEqualInstallment(principal, yearRate, years) {
-    const monthlyRate = yearRate / 100 / 12;
-    const months = years * 12;
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="no-results"><i class="fa-regular fa-face-meh"></i><p>没有找到匹配的工具</p></div>`;
+                return;
+            }
 
-    if (monthlyRate === 0) {
-      // 零利率特殊处理
-      const monthlyPayment = principal / months;
-      return {
-        years,
-        monthlyPayment,
-        totalInterest: 0,
-        totalPayment: principal
-      };
-    }
+            grid.innerHTML = filtered.map(tool => {
+                const badgeHTML = tool.isNew ? `<span class="tool-badge">NEW</span>` : '';
+                return `
+                <a href="${tool.url}" class="tool-card" style="--tool-color:${tool.color}">
+                    <div class="tool-thumb">${buildThumbHTML(tool)}</div>
+                    <div class="tool-info">
+                        <div class="tool-name">${tool.name} ${badgeHTML}</div>
+                        <div class="tool-desc">${tool.desc}</div>
+                        <div class="tool-footer">
+                            <span class="tool-cat"><i class="fa-solid fa-tag" style="font-size:0.6rem"></i> ${tool.category}</span>
+                            <span class="tool-go">开始使用 <i class="fa-solid fa-arrow-right" style="font-size:0.65rem"></i></span>
+                        </div>
+                    </div>
+                </a>`;
+            }).join('');
+        }
 
-    const factor = Math.pow(1 + monthlyRate, months);
-    const monthlyPayment = principal * monthlyRate * factor / (factor - 1);
-    const totalPayment = monthlyPayment * months;
-    const totalInterest = totalPayment - principal;
+        renderCards();
 
-    return {
-      years,
-      monthlyPayment,
-      totalInterest,
-      totalPayment
-    };
-  }
-
-  // ========== DOM 交互 ==========
-
-  const loanInput = document.getElementById('loanAmount');
-  const rateInput = document.getElementById('interestRate');
-  const chineseEl = document.getElementById('chineseAmount');
-  const btnCalc = document.getElementById('btnCalculate');
-  const emptyState = document.getElementById('emptyState');
-  const resultTable = document.getElementById('resultTable');
-  const resultBody = document.getElementById('resultBody');
-  const summaryRow = document.getElementById('summaryRow');
-
-  // 输入金额时实时显示大写
-  loanInput.addEventListener('input', function () {
-    // 只允许数字和小数点
-    this.value = this.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
-    const val = parseFloat(this.value);
-    if (!isNaN(val) && val > 0) {
-      chineseEl.textContent = toChineseAmount(val);
-      chineseEl.classList.add('visible');
-    } else {
-      chineseEl.classList.remove('visible');
-    }
-  });
-
-  // 利率输入格式化
-  rateInput.addEventListener('input', function () {
-    this.value = this.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
-  });
-
-  // 回车触发计算
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      btnCalc.click();
-    }
-  });
-
-  // 点击计算
-  btnCalc.addEventListener('click', function () {
-    console.log('开始计算按钮被点击');
-    
-    const principal = parseFloat(loanInput.value);
-    const yearRate = parseFloat(rateInput.value);
-
-    console.log('贷款金额:', principal);
-    console.log('年利率:', yearRate);
-
-    // 校验
-    if (isNaN(principal) || principal <= 0) {
-      showToast('请输入有效的贷款金额');
-      loanInput.focus();
-      return;
-    }
-    if (isNaN(yearRate) || yearRate < 0) {
-      showToast('请输入有效的年利率');
-      rateInput.focus();
-      return;
-    }
-    if (yearRate > 50) {
-      showToast('年利率不能超过 50%');
-      rateInput.focus();
-      return;
-    }
-
-    // 计算 1~30 年结果
-    const results = [];
-    for (let y = 5; y <= 30; y = y+5) {
-      results.push(calcEqualInstallment(principal, yearRate, y));
-    }
-/*
-    // 汇总数据
-    const minMonth = results[results.length - 1].monthlyPayment; // 最低月供（最长年限）
-    const maxMonth = results[0].monthlyPayment; // 最高月供（最短年限）
-    const minInterest = results[0].totalInterest; // 最低总利息（最短年限）
-    const maxInterest = results[results.length - 1].totalInterest; // 最高总利息（最长年限）
-
-    console.log('汇总数据:', {
-      minMonth,
-      maxMonth,
-      minInterest,
-      maxInterest
-    });
-
-    // 修正：使用正确的元素ID
-    document.getElementById('summaryAmount').textContent = formatMoney(principal);
-    document.getElementById('summaryMinMonth').textContent = formatMoney(minMonth);
-    document.getElementById('summaryMaxMonth').textContent = formatMoney(maxMonth);
-    document.getElementById('summaryMinInterest').textContent = formatMoney(minInterest);
-    // 修正：这里应该是summaryCard4中的summaryMinInterest，而不是summaryMaxInterest
-    document.getElementById('summaryMinInterest').textContent = formatMoney(minInterest);
-
-    // 显示汇总卡片
-    summaryRow.style.display = 'grid';
-    requestAnimationFrame(() => {
-      document.getElementById('summaryCard1').classList.add('show');
-      document.getElementById('summaryCard2').classList.add('show');
-      document.getElementById('summaryCard3').classList.add('show');
-      document.getElementById('summaryCard4').classList.add('show');
-    });
-*/
-    // 渲染表格
-    emptyState.style.display = 'none';
-    resultTable.style.display = 'table';
-    resultBody.innerHTML = '';
-
-    // 计算最大总利息，用于进度条比例
-    const maxTotalInterest = Math.max(...results.map(r => r.totalInterest), 1);
-
-    results.forEach((item, idx) => {
-      const tr = document.createElement('tr');
-      tr.style.animationDelay = `${idx * 0.03}s`;
-
-      const interestRatio = (item.totalInterest / maxTotalInterest * 100).toFixed(1);
-
-      tr.innerHTML = `
-        <td>${item.years} 年</td>
-        <td>${formatMoney(item.monthlyPayment)}</td>
-        <td>${formatMoney(item.totalInterest)}</td>
-      `;
-      resultBody.appendChild(tr);
-    });
-
-    // 滚动到顶部
-    document.getElementById('tableWrapper').scrollTop = 0;
-  });
-</script>
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); }
+            if (e.key === 'Escape' && document.activeElement === searchInput) { searchInput.value = ''; searchInput.blur(); renderCards(); }
+        });
+    </script>
 </body>
 </html>
