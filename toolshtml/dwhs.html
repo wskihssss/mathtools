@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单位换算</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg:#f5f7fa;--card:#fff;--fg:#2d3748;--fg-muted:#718096;
+    --accent:#84cc16;--accent-glow:rgba(132,204,22,0.15);--accent-soft:rgba(132,204,22,0.08);
+    --border:rgba(132,204,22,0.12);--border-strong:rgba(132,204,22,0.25);
+    --radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;}
+  body::before{content:'';position:fixed;top:-30%;right:-15%;width:500px;height:500px;background:radial-gradient(circle,rgba(132,204,22,0.06) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+  .page-header{text-align:center;margin-bottom:32px;}
+  .page-header h1{font-size:32px;font-weight:900;}
+  .page-header h1 span{color:var(--accent);}
+  .page-header p{font-size:14px;color:var(--fg-muted);margin-top:8px;}
+
+  .cat-bar{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;justify-content:center;}
+  .cat-btn{padding:8px 20px;border:1px solid var(--border);border-radius:100px;background:var(--card);color:var(--fg-muted);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all 0.2s;}
+  .cat-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+
+  .converter-card{
+    width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);padding:32px 28px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.06);
+  }
+  .row{display:flex;gap:16px;margin-bottom:16px;align-items:flex-end;}
+  .col{flex:1;}
+  .col-label{display:block;font-size:13px;color:var(--fg-muted);margin-bottom:6px;font-weight:500;}
+  .form-input{
+    width:100%;height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:0 14px;font-size:20px;font-family:'DM Mono',monospace;color:var(--fg);
+    background:var(--bg);outline:none;transition:all 0.2s;
+  }
+  .form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .form-select{
+    width:100%;height:48px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:0 14px;font-size:15px;font-family:inherit;color:var(--fg);
+    background:var(--card);cursor:pointer;outline:none;
+  }
+  .form-select:focus{border-color:var(--accent);}
+
+  .swap-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;border-radius:50%;border:2px solid var(--border);
+    background:var(--card);color:var(--fg-muted);font-size:16px;
+    cursor:pointer;transition:all 0.2s;flex-shrink:0;align-self:center;
+  }
+  .swap-btn:hover{border-color:var(--accent);color:var(--accent);transform:rotate(180deg);}
+
+  .result-box{
+    margin-top:20px;padding:20px;background:var(--accent-soft);border:1px solid var(--border);
+    border-radius:var(--radius-sm);text-align:center;
+  }
+  .result-value{font-size:32px;font-weight:900;color:var(--accent);word-break:break-all;}
+  .result-unit{font-size:14px;color:var(--fg-muted);margin-top:4px;}
+
+  .formula-note{
+    margin-top:20px;padding:14px 16px;background:var(--bg);border-radius:var(--radius-sm);
+    font-size:12px;color:var(--fg-muted);line-height:1.8;
+  }
+  .formula-note i{color:var(--accent);margin-right:4px;}
+
+  @media(max-width:480px){.row{flex-direction:column;gap:12px;}.swap-btn{align-self:center;transform:rotate(90deg);}.swap-btn:hover{transform:rotate(270deg);}}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><i class="fa-solid fa-right-left" style="color:var(--accent)"></i> 单位换算</h1>
+  <p>长度、面积、体积、质量等常用单位快速换算</p>
+</header>
+
+<div class="cat-bar" id="catBar"></div>
+
+<div class="converter-card">
+  <div class="row">
+    <div class="col">
+      <label class="col-label">数值</label>
+      <input type="number" class="form-input" id="inputVal" value="1" step="any">
+    </div>
+    <button class="swap-btn" id="btnSwap" title="交换单位"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+  </div>
+  <div class="row">
+    <div class="col">
+      <label class="col-label">从</label>
+      <select class="form-select" id="fromUnit"></select>
+    </div>
+    <div class="col">
+      <label class="col-label">到</label>
+      <select class="form-select" id="toUnit"></select>
+    </div>
+  </div>
+
+  <div class="result-box">
+    <div class="result-value" id="resultValue">—</div>
+    <div class="result-unit" id="resultUnit"></div>
+  </div>
+
+  <div class="formula-note" id="formulaNote">
+    <i class="fa-solid fa-circle-info"></i><span id="formulaText">选择单位后自动换算</span>
+  </div>
+</div>
+
+<script>
+const categories = {
+  '长度': {
+    units: ['毫米(mm)','厘米(cm)','分米(dm)','米(m)','千米(km)','英寸(in)','英尺(ft)','英里(mi)'],
+    base: '米(m)',
+    toBase: { '毫米(mm)':0.001, '厘米(cm)':0.01, '分米(dm)':0.1, '米(m)':1, '千米(km)':1000, '英寸(in)':0.0254, '英尺(ft)':0.3048, '英里(mi)':1609.344 }
+  },
+  '面积': {
+    units: ['平方毫米(mm²)','平方厘米(cm²)','平方米(m²)','公顷(hm²)','平方千米(km²)','平方英寸(in²)','平方英尺(ft²)','英亩(acre)'],
+    base: '平方米(m²)',
+    toBase: { '平方毫米(mm²)':1e-6, '平方厘米(cm²)':1e-4, '平方米(m²)':1, '公顷(hm²)':1e4, '平方千米(km²)':1e6, '平方英寸(in²)':6.4516e-4, '平方英尺(ft²)':0.09290304, '英亩(acre)':4046.8564224 }
+  },
+  '体积': {
+    units: ['毫升(mL)','升(L)','立方米(m³)','加仑(US gal)','夸脱(US qt)'],
+    base: '升(L)',
+    toBase: { '毫升(mL)':0.001, '升(L)':1, '立方米(m³)':1000, '加仑(US gal)':3.78541, '夸脱(US qt)':0.946353 }
+  },
+  '质量': {
+    units: ['毫克(mg)','克(g)','千克(kg)','吨(t)','盎司(oz)','磅(lb)'],
+    base: '千克(kg)',
+    toBase: { '毫克(mg)':1e-6, '克(g)':0.001, '千克(kg)':1, '吨(t)':1000, '盎司(oz)':0.0283495, '磅(lb)':0.453592 }
+  },
+  '温度': {
+    units: ['摄氏度(°C)','华氏度(°F)','开尔文(K)'],
+    special: true
+  }
+};
+
+let currentCat = '长度';
+const catBar = document.getElementById('catBar');
+const fromSel = document.getElementById('fromUnit');
+const toSel = document.getElementById('toUnit');
+const inputVal = document.getElementById('inputVal');
+const resultValue = document.getElementById('resultValue');
+const resultUnit = document.getElementById('resultUnit');
+const formulaText = document.getElementById('formulaText');
+
+function buildCatBar() {
+  catBar.innerHTML = Object.keys(categories).map(c =>
+    `<button class="cat-btn${c===currentCat?' active':''}" data-cat="${c}">${c}</button>`
+  ).join('');
+}
+
+function buildUnitSelects() {
+  const units = categories[currentCat].units;
+  fromSel.innerHTML = units.map((u,i) => `<option${i===0?' selected':''}>${u}</option>`).join('');
+  toSel.innerHTML = units.map((u,i) => `<option${i===1?' selected':''}>${u}</option>`).join('');
+}
+
+function convert() {
+  const val = parseFloat(inputVal.value);
+  if (isNaN(val)) { resultValue.textContent = '—'; resultUnit.textContent = ''; return; }
+  const from = fromSel.value;
+  const to = toSel.value;
+  const cat = categories[currentCat];
+
+  if (cat.special && currentCat === '温度') {
+    let result;
+    if (from === to) { result = val; }
+    else if (from === '摄氏度(°C)' && to === '华氏度(°F)') { result = val * 9/5 + 32; }
+    else if (from === '摄氏度(°C)' && to === '开尔文(K)') { result = val + 273.15; }
+    else if (from === '华氏度(°F)' && to === '摄氏度(°C)') { result = (val - 32) * 5/9; }
+    else if (from === '华氏度(°F)' && to === '开尔文(K)') { result = (val - 32) * 5/9 + 273.15; }
+    else if (from === '开尔文(K)' && to === '摄氏度(°C)') { result = val - 273.15; }
+    else if (from === '开尔文(K)' && to === '华氏度(°F)') { result = (val - 273.15) * 9/5 + 32; }
+    resultValue.textContent = Number(result.toFixed(6)).toString();
+    resultUnit.textContent = to;
+    formulaText.textContent = '温度换算：°F = °C×9/5+32, K = °C+273.15';
+  } else {
+    const fromBase = cat.toBase[from];
+    const toBase = cat.toBase[to];
+    const result = val * fromBase / toBase;
+    resultValue.textContent = Number(result.toPrecision(10)).toString();
+    resultUnit.textContent = to;
+    formulaText.textContent = `1 ${from} = ${(fromBase/toBase).toPrecision(6)} ${to}`;
+  }
+}
+
+catBar.addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  currentCat = btn.dataset.cat;
+  buildCatBar();
+  buildUnitSelects();
+  convert();
+});
+
+document.getElementById('btnSwap').addEventListener('click', () => {
+  const tmp = fromSel.selectedIndex;
+  fromSel.selectedIndex = toSel.selectedIndex;
+  toSel.selectedIndex = tmp;
+  convert();
+});
+
+fromSel.addEventListener('change', convert);
+toSel.addEventListener('change', convert);
+inputVal.addEventListener('input', convert);
+
+buildCatBar();
+buildUnitSelects();
+convert();
+</script>
+</body>
+</html>

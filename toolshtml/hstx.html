@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>函数图像</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg:#f5f7fa;--card:#fff;--fg:#2d3748;--fg-muted:#718096;
+    --accent:#ef4444;--accent-glow:rgba(239,68,68,0.15);--accent-soft:rgba(239,68,68,0.08);
+    --border:rgba(239,68,68,0.12);--border-strong:rgba(239,68,68,0.25);
+    --success:#48bb78;--warning:#f6ad55;
+    --radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column;}
+  .page-header{padding:24px 20px 16px;text-align:center;background:var(--card);border-bottom:1px solid var(--border);}
+  .page-header h1{font-size:28px;font-weight:900;}
+  .page-header h1 span{color:var(--accent);}
+  .page-header p{font-size:13px;color:var(--fg-muted);margin-top:4px;}
+
+  .main-layout{display:flex;flex:1;overflow:hidden;}
+  .sidebar{width:300px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .sidebar-section{padding:16px;border-bottom:1px solid var(--border);}
+  .sidebar-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .sidebar-title i{color:var(--accent);}
+
+  .type-selector{display:flex;gap:8px;margin-bottom:14px;}
+  .type-btn{
+    flex:1;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);
+    background:var(--card);cursor:pointer;text-align:center;transition:all 0.2s;
+  }
+  .type-btn:hover{border-color:var(--accent);}
+  .type-btn.active{border-color:var(--accent);background:var(--accent-soft);}
+  .type-btn .type-icon{font-size:20px;margin-bottom:4px;}
+  .type-btn .type-name{font-size:12px;font-weight:600;color:var(--fg);}
+  .type-btn .type-desc{font-size:11px;color:var(--fg-muted);margin-top:2px;}
+
+  .param-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .param-label{font-size:13px;color:var(--fg-muted);white-space:nowrap;min-width:50px;}
+  .param-slider{flex:1;-webkit-appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none;}
+  .param-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(239,68,68,0.3);}
+  .param-value{
+    width:56px;height:34px;text-align:center;border:1px solid var(--border);border-radius:var(--radius-sm);
+    font-size:14px;font-weight:700;font-family:'DM Mono',monospace;color:var(--fg);
+    background:var(--bg);outline:none;
+  }
+  .param-value:focus{border-color:var(--accent);}
+
+  .formula-display{
+    padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+    text-align:center;font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--fg);
+    margin-bottom:12px;
+  }
+
+  .info-card{
+    padding:14px;background:var(--accent-soft);border:1px solid var(--border);border-radius:var(--radius-sm);
+    font-size:12px;color:var(--fg-muted);line-height:1.8;
+  }
+  .info-card strong{color:var(--fg);}
+
+  .canvas-area{flex:1;position:relative;overflow:hidden;background:#fff;}
+  #funcCanvas{display:block;width:100%;height:100%;}
+
+  .zoom-controls{position:absolute;bottom:16px;right:16px;display:flex;gap:6px;}
+  .zoom-btn{
+    width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+    background:var(--card);color:var(--fg);font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  }
+  .zoom-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  .coord-display{
+    position:absolute;bottom:16px;left:16px;padding:6px 12px;
+    background:rgba(255,255,255,0.9);border:1px solid var(--border);border-radius:var(--radius-sm);
+    font-size:12px;color:var(--fg-muted);font-family:'DM Mono',monospace;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  @media(max-width:768px){
+    .main-layout{flex-direction:column;}
+    .sidebar{width:100%;max-height:45vh;}
+    .type-selector{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><i class="fa-solid fa-chart-line" style="color:var(--accent)"></i> 函数图像</h1>
+  <p>正比例与反比例函数图像，拖动滑块观察变化</p>
+</header>
+
+<div class="main-layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title"><i class="fa-solid fa-shapes"></i> 选择函数类型</div>
+      <div class="type-selector">
+        <div class="type-btn active" data-type="direct" onclick="setType('direct')">
+          <div class="type-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+          <div class="type-name">正比例函数</div>
+          <div class="type-desc">y = kx</div>
+        </div>
+        <div class="type-btn" data-type="inverse" onclick="setType('inverse')">
+          <div class="type-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+          <div class="type-name">反比例函数</div>
+          <div class="type-desc">y = k/x</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title"><i class="fa-solid fa-sliders"></i> 参数调节</div>
+      <div class="param-row">
+        <span class="param-label">k 值</span>
+        <input type="range" class="param-slider" id="kSlider" min="-5" max="5" step="0.1" value="1">
+        <input type="number" class="param-value" id="kValue" value="1" step="0.1" min="-5" max="5">
+      </div>
+
+      <div class="formula-display" id="formulaDisplay">y = 1x</div>
+
+      <div class="info-card" id="infoCard">
+        <strong>正比例函数 y = kx</strong><br>
+        图像是一条经过原点 (0,0) 的直线。<br>
+        k > 0 时，图像经过第一、三象限；<br>
+        k < 0 时，图像经过第二、四象限。<br>
+        |k| 越大，直线越靠近 y 轴。
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title"><i class="fa-solid fa-eye"></i> 显示选项</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-muted);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="showGrid" checked onchange="draw()" style="accent-color:var(--accent);"> 显示网格
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-muted);cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="showPoints" checked onchange="draw()" style="accent-color:var(--accent);"> 显示整数点
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg-muted);cursor:pointer;">
+        <input type="checkbox" id="showLabel" checked onchange="draw()" style="accent-color:var(--accent);"> 显示坐标
+      </label>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+    <canvas id="funcCanvas"></canvas>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomIn()" title="放大"><i class="fa-solid fa-plus"></i></button>
+      <button class="zoom-btn" onclick="zoomOut()" title="缩小"><i class="fa-solid fa-minus"></i></button>
+      <button class="zoom-btn" onclick="resetView()" title="重置视图"><i class="fa-solid fa-expand"></i></button>
+    </div>
+    <div class="coord-display" id="coordDisplay">鼠标坐标: —</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('funcCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let viewXMin = -10, viewXMax = 10, viewYMin = -10, viewYMax = 10;
+let funcType = 'direct';
+let k = 1;
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = rect.width * devicePixelRatio;
+  H = canvas.height = rect.height * devicePixelRatio;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+window.addEventListener('resize', resize);
+
+function toScreen(x, y) {
+  const sx = (x - viewXMin) / (viewXMax - viewXMin) * (W/devicePixelRatio);
+  const sy = (1 - (y - viewYMin) / (viewYMax - viewYMin)) * (H/devicePixelRatio);
+  return [sx, sy];
+}
+
+function toMath(sx, sy) {
+  const x = viewXMin + sx / (W/devicePixelRatio) * (viewXMax - viewXMin);
+  const y = viewYMax - sy / (H/devicePixelRatio) * (viewYMax - viewYMin);
+  return [x, y];
+}
+
+function niceStep(range, targetTicks) {
+  const rough = range / targetTicks;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const frac = rough / pow;
+  let nice;
+  if (frac <= 1.5) nice = 1;
+  else if (frac <= 3) nice = 2;
+  else if (frac <= 7) nice = 5;
+  else nice = 10;
+  return nice * pow;
+}
+
+function draw() {
+  const w = W/devicePixelRatio, h = H/devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  const showGrid = document.getElementById('showGrid').checked;
+  const showPoints = document.getElementById('showPoints').checked;
+  const showLabel = document.getElementById('showLabel').checked;
+
+  // Grid
+  if (showGrid) {
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 0.5;
+    const xStep = niceStep(viewXMax - viewXMin, 10);
+    const yStep = niceStep(viewYMax - viewYMin, 10);
+    for (let x = Math.ceil(viewXMin/xStep)*xStep; x <= viewXMax; x += xStep) {
+      const [sx] = toScreen(x, 0);
+      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke();
+    }
+    for (let y = Math.ceil(viewYMin/yStep)*yStep; y <= viewYMax; y += yStep) {
+      const [, sy] = toScreen(0, y);
+      ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(w, sy); ctx.stroke();
+    }
+  }
+
+  // Axes
+  const [ax, ay] = toScreen(0, 0);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+  if (ax >= 0 && ax <= w) { ctx.beginPath(); ctx.moveTo(ax, 0); ctx.lineTo(ax, h); ctx.stroke(); }
+  if (ay >= 0 && ay <= h) { ctx.beginPath(); ctx.moveTo(0, ay); ctx.lineTo(w, ay); ctx.stroke(); }
+
+  // Axis labels
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif';
+  const xStep = niceStep(viewXMax - viewXMin, 10);
+  const yStep = niceStep(viewYMax - viewYMin, 10);
+  ctx.textAlign = 'center';
+  for (let x = Math.ceil(viewXMin/xStep)*xStep; x <= viewXMax; x += xStep) {
+    if (Math.abs(x) < xStep * 0.1) continue;
+    const [sx] = toScreen(x, 0);
+    ctx.fillText(Math.round(x*10)/10, sx, Math.min(Math.max(ay + 16, 16), h - 4));
+  }
+  ctx.textAlign = 'right';
+  for (let y = Math.ceil(viewYMin/yStep)*yStep; y <= viewYMax; y += yStep) {
+    if (Math.abs(y) < yStep * 0.1) continue;
+    const [, sy] = toScreen(0, y);
+    ctx.fillText(Math.round(y*10)/10, Math.max(ax - 6, 30), sy + 4);
+  }
+
+  // Function curve
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  let started = false;
+  const step = (viewXMax - viewXMin) / (w * 2);
+
+  if (funcType === 'direct') {
+    for (let x = viewXMin; x <= viewXMax; x += step) {
+      const y = k * x;
+      const [sx, sy] = toScreen(x, y);
+      if (!started) { ctx.moveTo(sx, sy); started = true; } else { ctx.lineTo(sx, sy); }
+    }
+  } else {
+    for (let x = viewXMin; x <= viewXMax; x += step) {
+      if (Math.abs(x) < 0.001) { started = false; continue; }
+      const y = k / x;
+      if (!isFinite(y) || Math.abs(y) > 1e6) { started = false; continue; }
+      const [sx, sy] = toScreen(x, y);
+      if (!started) { ctx.moveTo(sx, sy); started = true; } else { ctx.lineTo(sx, sy); }
+    }
+  }
+  ctx.stroke();
+
+  // Draw integer points on the curve
+  if (showPoints) {
+    ctx.fillStyle = '#ef4444';
+    const range = Math.ceil(Math.max(viewXMax, viewYMax));
+    for (let x = -range; x <= range; x++) {
+      if (x === 0 && funcType === 'inverse') continue;
+      let y;
+      if (funcType === 'direct') { y = k * x; } else { y = k / x; }
+      if (!isFinite(y) || Math.abs(y) > range) continue;
+      const [sx, sy] = toScreen(x, y);
+      if (sx < -10 || sx > w+10 || sy < -10 || sy > h+10) continue;
+      if (Number.isInteger(y) || (funcType === 'inverse' && Number.isInteger(k) && x !== 0 && k % x === 0)) {
+        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI*2); ctx.fill();
+        if (showLabel) {
+          ctx.fillStyle = '#ef4444'; ctx.font = '11px DM Mono, monospace'; ctx.textAlign = 'left';
+          ctx.fillText(`(${x},${Math.round(y)})`, sx + 7, sy - 7);
+          ctx.fillStyle = '#ef4444';
+        }
+      }
+    }
+  }
+
+  // Origin label
+  if (showLabel && ax >= 0 && ax <= w && ay >= 0 && ay <= h) {
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('O', ax + 6, ay + 16);
+  }
+}
+
+function setType(type) {
+  funcType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  updateDisplay();
+  draw();
+}
+
+function updateDisplay() {
+  const kVal = parseFloat(document.getElementById('kValue').value) || 0;
+  k = kVal;
+
+  if (funcType === 'direct') {
+    const kStr = k === 1 ? '' : k === -1 ? '-' : (k < 0 ? '-' + Math.abs(k) : k);
+    document.getElementById('formulaDisplay').textContent = `y = ${kStr}x`;
+    document.getElementById('infoCard').innerHTML = `
+      <strong>正比例函数 y = kx</strong><br>
+      图像是一条经过原点 (0,0) 的直线。<br>
+      ${k > 0 ? 'k > 0，图像经过<strong>第一、三象限</strong>。' : k < 0 ? 'k < 0，图像经过<strong>第二、四象限</strong>。' : 'k = 0，图像与 x 轴重合。'}<br>
+      |k| = ${Math.abs(k).toFixed(1)}，${Math.abs(k) > 1 ? '直线较陡' : Math.abs(k) < 1 && k !== 0 ? '直线较平缓' : ''}。<br>
+      y 随 x 的增大而${k > 0 ? '增大' : k < 0 ? '减小' : '不变'}。
+    `;
+  } else {
+    const kStr = k === 1 ? '' : k === -1 ? '-' : (k < 0 ? '-' + Math.abs(k) : k);
+    document.getElementById('formulaDisplay').textContent = `y = ${kStr} / x`;
+    document.getElementById('infoCard').innerHTML = `
+      <strong>反比例函数 y = k/x</strong><br>
+      图像由两条曲线（双曲线）组成，不经过原点。<br>
+      ${k > 0 ? 'k > 0，图像在<strong>第一、三象限</strong>。' : k < 0 ? 'k < 0，图像在<strong>第二、四象限</strong>。' : 'k = 0，无意义。'}<br>
+      在每个象限内，y 随 x 的增大而${k > 0 ? '减小' : '增大'}。<br>
+      图像无限接近坐标轴，但永远不会与坐标轴相交。
+    `;
+  }
+}
+
+function zoomIn() {
+  const cx = (viewXMin+viewXMax)/2, cy = (viewYMin+viewYMax)/2;
+  const dx = (viewXMax-viewXMin)*0.25, dy = (viewYMax-viewYMin)*0.25;
+  viewXMin=cx-dx;viewXMax=cx+dx;viewYMin=cy-dy;viewYMax=cy+dy;
+  draw();
+}
+function zoomOut() {
+  const cx = (viewXMin+viewXMax)/2, cy = (viewYMin+viewYMax)/2;
+  const dx = (viewXMax-viewXMin)*0.5, dy = (viewYMax-viewYMin)*0.5;
+  viewXMin=cx-dx;viewXMax=cx+dx;viewYMin=cy-dy;viewYMax=cy+dy;
+  draw();
+}
+function resetView() { viewXMin=-10;viewXMax=10;viewYMin=-10;viewYMax=10;draw(); }
+
+// Slider <-> Input sync
+const kSlider = document.getElementById('kSlider');
+const kValue = document.getElementById('kValue');
+kSlider.addEventListener('input', () => { kValue.value = kSlider.value; updateDisplay(); draw(); });
+kValue.addEventListener('input', () => {
+  let v = parseFloat(kValue.value);
+  if (!isNaN(v)) { v = Math.max(-5, Math.min(5, v)); kSlider.value = v; }
+  updateDisplay(); draw();
+});
+
+// Mouse pan
+let isDragging = false, dragStartX, dragStartY;
+canvas.addEventListener('mousedown', e => { isDragging=true; dragStartX=e.clientX; dragStartY=e.clientY; });
+canvas.addEventListener('mousemove', e => {
+  const [mx, my] = toMath(e.offsetX, e.offsetY);
+  document.getElementById('coordDisplay').textContent = `坐标: (${mx.toFixed(2)}, ${my.toFixed(2)})`;
+  if (!isDragging) return;
+  const dx = (e.clientX - dragStartX) / (W/devicePixelRatio) * (viewXMax - viewXMin);
+  const dy = (e.clientY - dragStartY) / (H/devicePixelRatio) * (viewYMax - viewYMin);
+  viewXMin -= dx; viewXMax -= dx; viewYMin += dy; viewYMax += dy;
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  draw();
+});
+canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 1.15 : 0.87;
+  const [mx, my] = toMath(e.offsetX, e.offsetY);
+  viewXMin = mx + (viewXMin - mx) * factor;
+  viewXMax = mx + (viewXMax - mx) * factor;
+  viewYMin = my + (viewYMin - my) * factor;
+  viewYMax = my + (viewYMax - my) * factor;
+  draw();
+}, { passive: false });
+
+updateDisplay();
+resize();
+</script>
+</body>
+</html>

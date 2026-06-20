@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公式手册</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg:#f5f7fa;--card:#fff;--fg:#2d3748;--fg-muted:#718096;
+    --accent:#8b5cf6;--accent-glow:rgba(139,92,246,0.15);--accent-soft:rgba(139,92,246,0.08);
+    --border:rgba(139,92,246,0.12);--border-strong:rgba(139,92,246,0.25);
+    --radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;}
+  body::before{content:'';position:fixed;top:-30%;right:-15%;width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,0.06) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+
+  .page-header{text-align:center;padding:40px 20px 24px;}
+  .page-header h1{font-size:32px;font-weight:900;}
+  .page-header h1 span{color:var(--accent);}
+  .page-header p{font-size:14px;color:var(--fg-muted);margin-top:8px;}
+
+  .search-bar{max-width:480px;margin:0 auto 24px;position:relative;padding:0 20px;}
+  .search-input{
+    width:100%;height:48px;border:1px solid var(--border);border-radius:100px;
+    padding:0 20px 0 44px;font-size:15px;font-family:inherit;color:var(--fg);
+    background:var(--card);outline:none;transition:all 0.2s;
+  }
+  .search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .search-icon{position:absolute;left:36px;top:50%;transform:translateY(-50%);color:var(--fg-muted);}
+
+  .cat-bar{display:flex;justify-content:center;gap:8px;padding:0 20px 28px;flex-wrap:wrap;}
+  .cat-btn{
+    padding:8px 20px;border:1px solid var(--border);border-radius:100px;
+    background:var(--card);color:var(--fg-muted);font-size:13px;font-weight:500;
+    font-family:inherit;cursor:pointer;transition:all 0.2s;
+  }
+  .cat-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+
+  .formula-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:20px;padding:0 40px 80px;max-width:1280px;margin:0 auto;
+  }
+
+  .formula-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:24px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.03);
+  }
+  .formula-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.06);border-color:var(--border-strong);}
+
+  .formula-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .formula-icon{
+    width:36px;height:36px;border-radius:var(--radius-sm);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  .formula-title{font-size:15px;font-weight:700;}
+  .formula-tag{font-size:11px;padding:2px 8px;border-radius:100px;background:var(--accent-soft);color:var(--accent);font-weight:600;}
+
+  .formula-body{
+    font-size:18px;font-weight:700;text-align:center;padding:18px 0;
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    margin-bottom:12px;line-height:1.6;color:var(--fg);
+    font-family:'DM Mono','Times New Roman',serif;
+  }
+
+  .formula-desc{font-size:13px;color:var(--fg-muted);line-height:1.7;}
+  .formula-desc strong{color:var(--fg);font-weight:600;}
+
+  .no-results{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--fg-muted);}
+  .no-results i{font-size:3rem;margin-bottom:12px;display:block;opacity:0.2;}
+
+  @media(max-width:768px){.formula-grid{grid-template-columns:1fr;padding:0 16px 60px;}}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><i class="fa-solid fa-book-open" style="color:var(--accent)"></i> 公式手册</h1>
+  <p>小学常用数学公式速查，支持分类检索</p>
+</header>
+
+<div class="search-bar">
+  <i class="fa-solid fa-magnifying-glass search-icon"></i>
+  <input type="text" class="search-input" id="searchInput" placeholder="搜索公式名称或关键词...">
+</div>
+
+<div class="cat-bar" id="catBar"></div>
+<div class="formula-grid" id="formulaGrid"></div>
+
+<script>
+const formulas = [
+  {
+    cat: '四则运算',
+    icon: 'fa-solid fa-calculator',
+    color: '#ef4444',
+    items: [
+      { name:'加法交换律', formula:'a + b = b + a', desc:'两个数相加，交换加数的位置，和不变。例如：3+5=5+3。' },
+      { name:'加法结合律', formula:'(a + b) + c = a + (b + c)', desc:'三个数相加，先把前两个数相加再加第三个数，或者先把后两个数相加再加第一个数，和不变。' },
+      { name:'乘法交换律', formula:'a × b = b × a', desc:'两个数相乘，交换因数的位置，积不变。例如：4×6=6×4。' },
+      { name:'乘法结合律', formula:'(a × b) × c = a × (b × c)', desc:'三个数相乘，先把前两个数相乘再乘第三个数，积不变。' },
+      { name:'乘法分配律', formula:'a × (b + c) = a×b + a×c', desc:'一个数乘以两个数的和，等于这个数分别乘以这两个数再相加。这是最重要的运算律之一。' },
+      { name:'减法的性质', formula:'a - b - c = a - (b + c)', desc:'一个数连续减去两个数，等于这个数减去这两个数的和。' },
+      { name:'除法的性质', formula:'a ÷ b ÷ c = a ÷ (b × c)', desc:'一个数连续除以两个数，等于这个数除以这两个数的积。' },
+      { name:'商不变规律', formula:'a÷b = (a×n)÷(b×n)', desc:'被除数和除数同时乘以或除以同一个不为零的数，商不变。这是约分和通分的基础。' },
+    ]
+  },
+  {
+    cat: '简便运算',
+    icon: 'fa-solid fa-wand-magic-sparkles',
+    color: '#0ea5e9',
+    items: [
+      { name:'凑整法', formula:'a + b = (a + c) + (b - c)', desc:'把一个加数凑成整十、整百的数，使计算简便。例如：37+98 = 37+100-2 = 135。' },
+      { name:'拆分法', formula:'a × b = a × (c + d) = a×c + a×d', desc:'把一个因数拆成两个数的和，利用分配律简化计算。例如：25×12 = 25×4×3 = 300。' },
+      { name:'添括号法', formula:'a + b - c = a + (b - c)\na - b - c = a - (b + c)\na - b + c = a - (b - c)', desc:'加减法添括号规则：括号前是加号，括号内不变号；括号前是减号，括号内各项都要变号。乘除法同理：a÷b÷c = a÷(b×c)，括号前是除号，括号内乘除互变。' },
+      { name:'等差数列求和（高斯公式）', formula:'和 = (首项 + 末项) × 项数 ÷ 2', desc:'从1加到100：(1+100)×100÷2 = 5050。这是高斯小时候发现的简便算法。' },
+    ]
+  },
+  {
+    cat: '图形面积',
+    icon: 'fa-solid fa-shapes',
+    color: '#10b981',
+    items: [
+      { name:'长方形面积', formula:'S = 长 × 宽', desc:'长方形的面积等于长乘以宽。长方形有4个直角，对边相等。' },
+      { name:'正方形面积', formula:'S = 边长 × 边长 = a²', desc:'正方形的面积等于边长的平方。正方形是特殊的长方形，四条边都相等。' },
+      { name:'平行四边形面积', formula:'S = 底 × 高', desc:'平行四边形的面积等于底乘以高（高是底边到对边的垂直距离）。' },
+      { name:'三角形面积', formula:'S = 底 × 高 ÷ 2', desc:'三角形的面积等于底乘以高再除以2。三角形面积是同底等高平行四边形的一半。' },
+      { name:'梯形面积', formula:'S = (上底 + 下底) × 高 ÷ 2', desc:'梯形的面积等于上底加下底的和乘以高再除以2。' },
+      { name:'组合图形', formula:'组合 = 大图形 - 小图形（或分割求和）', desc:'求不规则图形面积，可以用"割补法"：把图形补成规则图形再减去多余部分，或分割成多个规则图形分别求面积再相加。' },
+    ]
+  },
+  {
+    cat: '图形周长',
+    icon: 'fa-solid fa-vector-square',
+    color: '#f97316',
+    items: [
+      { name:'长方形周长', formula:'C = (长 + 宽) × 2', desc:'长方形的周长等于长加宽的和乘以2。' },
+      { name:'正方形周长', formula:'C = 边长 × 4', desc:'正方形的周长等于边长乘以4。' },
+      { name:'圆的周长', formula:'C = π × 直径 = 2 × π × 半径', desc:'圆的周长等于圆周率π乘以直径。π≈3.14，是一个无限不循环小数。' },
+      { name:'圆的面积', formula:'S = π × 半径 × 半径 = πr²', desc:'圆的面积等于π乘以半径的平方。可以把圆分成很多小扇形，拼成一个近似的长方形来理解。' },
+    ]
+  },
+  {
+    cat: '体积与容积',
+    icon: 'fa-solid fa-box',
+    color: '#8b5cf6',
+    items: [
+      { name:'长方体体积', formula:'V = 长 × 宽 × 高', desc:'长方体的体积等于长、宽、高的乘积。也可以理解为底面积乘以高。' },
+      { name:'正方体体积', formula:'V = 棱长 × 棱长 × 棱长 = a³', desc:'正方体的体积等于棱长的立方。正方体是特殊的长方体，6个面都是相同的正方形。' },
+      { name:'圆柱体积', formula:'V = 底面积 × 高 = πr²h', desc:'圆柱的体积等于底面积乘以高。' },
+      { name:'圆锥体积', formula:'V = ⅓ × 底面积 × 高 = ⅓πr²h', desc:'圆锥的体积等于同底等高圆柱体积的三分之一。这是小学阶段重要的体积公式。' },
+      { name:'容积单位换算', formula:'1升 = 1立方分米\n1毫升 = 1立方厘米\n1升 = 1000毫升', desc:'容积单位和体积单位之间的换算关系。1升水的质量大约是1千克。' },
+    ]
+  },
+  {
+    cat: '单位换算',
+    icon: 'fa-solid fa-right-left',
+    color: '#ec4899',
+    items: [
+      { name:'长度单位', formula:'1千米 = 1000米\n1米 = 10分米 = 100厘米\n1分米 = 10厘米\n1厘米 = 10毫米', desc:'常用的长度单位从大到小：千米、米、分米、厘米、毫米。相邻两个单位之间的进率是10。' },
+      { name:'面积单位', formula:'1平方米 = 100平方分米\n1平方分米 = 100平方厘米\n1公顷 = 10000平方米', desc:'面积单位的进率是100（因为边长进率是10，10×10=100）。' },
+      { name:'质量单位', formula:'1吨 = 1000千克\n1千克 = 1000克', desc:'常用质量单位：吨、千克、克。相邻两个单位之间的进率是1000。' },
+      { name:'时间单位', formula:'1时 = 60分\n1分 = 60秒\n1日 = 24时\n1年 ≈ 365天', desc:'时间单位之间的换算比较特殊：时分秒之间进率是60，不是10。' },
+    ]
+  },
+  {
+    cat: '分数与小数',
+    icon: 'fa-solid fa-divide',
+    color: '#eab308',
+    items: [
+      { name:'分数的意义', formula:'a/b = a ÷ b', desc:'分数 a/b 表示把整体平均分成 b 份，取其中的 a 份。分母不能为0。' },
+      { name:'分数加减法', formula:'a/c ± b/c = (a±b)/c', desc:'同分母分数相加减，分母不变，分子相加减。异分母要先通分。' },
+      { name:'分数乘法', formula:'a/b × c/d = (a×c)/(b×d)', desc:'分数乘法：分子乘分子，分母乘分母。能约分的先约分再计算。' },
+      { name:'分数除法', formula:'a/b ÷ c/d = a/b × d/c', desc:'分数除以一个数，等于乘以这个数的倒数。' },
+      { name:'小数与分数互化', formula:'0.1 = 1/10\n0.01 = 1/100\n0.25 = 1/4\n0.5 = 1/2', desc:'十分之几写成一位小数，百分之几写成两位小数。常用：0.5=1/2，0.25=1/4，0.125=1/8。' },
+    ]
+  },
+  {
+    cat: '比例与比',
+    icon: 'fa-solid fa-scale-balanced',
+    color: '#06b6d4',
+    items: [
+      { name:'比的意义', formula:'a : b = a ÷ b', desc:'比表示两个数之间的关系。比的前项除以后项等于比值。' },
+      { name:'比的基本性质', formula:'a : b = (a×n) : (b×n)', desc:'比的前项和后项同时乘以或除以同一个不为零的数，比值不变。用于化简比。' },
+      { name:'比例的基本性质', formula:'如果 a:b = c:d，那么 a×d = b×c', desc:'比例的两个外项之积等于两个内项之积。这是解比例的依据，例如已知 2:3 = x:9，可得 3x = 18，x = 6。' },
+      { name:'正比例', formula:'y/x = k（一定）\n即 y = kx', desc:'两种相关联的量，一种量变化另一种量也变化，如果它们的比值（商）一定，这两种量成正比例。例如：速度一定时，路程和时间成正比。' },
+      { name:'反比例', formula:'x × y = k（一定）\n即 y = k/x', desc:'两种相关联的量，一种量变化另一种量也变化，如果它们的乘积一定，这两种量成反比例。例如：路程一定时，速度和时间成反比。' },
+    ]
+  },
+];
+
+let currentCat = '全部';
+const catBar = document.getElementById('catBar');
+const formulaGrid = document.getElementById('formulaGrid');
+const searchInput = document.getElementById('searchInput');
+
+const cats = ['全部', ...new Set(formulas.map(f => f.cat))];
+
+function buildCatBar() {
+  catBar.innerHTML = cats.map(c => {
+    const count = c === '全部' ? formulas.reduce((s,f) => s+f.items.length, 0) : formulas.find(f => f.cat===c)?.items.length||0;
+    return `<button class="cat-btn${c===currentCat?' active':''}" data-cat="${c}">${c} (${count})</button>`;
+  }).join('');
+}
+
+function render() {
+  const query = searchInput.value.trim().toLowerCase();
+  let filtered = currentCat === '全部' ? formulas : formulas.filter(f => f.cat === currentCat);
+
+  if (query) {
+    filtered = filtered.map(cat => ({
+      ...cat,
+      items: cat.items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.formula.toLowerCase().includes(query) ||
+        item.desc.toLowerCase().includes(query) ||
+        item.name.includes(query) ||
+        item.desc.includes(query)
+      )
+    })).filter(cat => cat.items.length > 0);
+  }
+
+  if (filtered.reduce((s,c) => s+c.items.length, 0) === 0) {
+    formulaGrid.innerHTML = `<div class="no-results"><i class="fa-regular fa-face-meh"></i><p>没有找到匹配的公式</p></div>`;
+    return;
+  }
+
+  formulaGrid.innerHTML = filtered.map(cat => cat.items.map(item => `
+    <div class="formula-card">
+      <div class="formula-header">
+        <div class="formula-icon" style="background:${cat.color}15;color:${cat.color};">
+          <i class="${cat.icon}"></i>
+        </div>
+        <div class="formula-title">${item.name}</div>
+        <span class="formula-tag">${cat.cat}</span>
+      </div>
+      <div class="formula-body">${item.formula.replace(/\n/g, '<br>')}</div>
+      <div class="formula-desc">${item.desc}</div>
+    </div>
+  `).join('')).join('');
+}
+
+catBar.addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  currentCat = btn.dataset.cat;
+  buildCatBar();
+  render();
+});
+
+searchInput.addEventListener('input', render);
+
+buildCatBar();
+render();
+</script>
+</body>
+</html>

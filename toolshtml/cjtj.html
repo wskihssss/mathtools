@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成绩统计</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg:#f5f7fa;--card:#fff;--fg:#2d3748;--fg-muted:#718096;
+    --accent:#0ea5e9;--accent-glow:rgba(14,165,233,0.15);--accent-soft:rgba(14,165,233,0.08);
+    --border:rgba(14,165,233,0.12);--border-strong:rgba(14,165,233,0.25);
+    --success:#48bb78;--danger:#f56565;--warning:#f6ad55;
+    --radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;padding:40px 20px;}
+  body::before{content:'';position:fixed;top:-30%;right:-15%;width:500px;height:500px;background:radial-gradient(circle,rgba(14,165,233,0.06) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+  .container{max-width:900px;margin:0 auto;}
+  .page-header{text-align:center;margin-bottom:32px;}
+  .page-header h1{font-size:32px;font-weight:900;}
+  .page-header h1 span{color:var(--accent);}
+  .page-header p{font-size:14px;color:var(--fg-muted);margin-top:8px;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.04);}
+  .card-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title i{color:var(--accent);}
+
+  textarea{width:100%;height:100px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;font-family:inherit;color:var(--fg);resize:vertical;outline:none;background:var(--bg);}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  textarea::placeholder{color:rgba(113,128,150,0.5);}
+
+  .btn{padding:10px 28px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(14,165,233,0.3);}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(14,165,233,0.4);}
+  .btn-outline{background:var(--card);border:1px solid var(--border);color:var(--fg-muted);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+
+  .import-area{
+    border:2px dashed var(--border);border-radius:var(--radius);padding:32px;
+    text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:12px;
+  }
+  .import-area:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .import-area.dragover{border-color:var(--accent);background:var(--accent-soft);}
+  .import-area i{font-size:32px;color:var(--accent);opacity:0.5;margin-bottom:8px;display:block;}
+  .import-area p{font-size:13px;color:var(--fg-muted);}
+  .import-area .hint{font-size:11px;color:var(--fg-muted);margin-top:4px;opacity:0.7;}
+
+  .input-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .input-hint{font-size:13px;color:var(--fg-muted);}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;}
+  .stat-label{font-size:12px;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+  .stat-value{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;}
+  .stat-value.accent{color:var(--accent);}
+  .stat-value.success{color:var(--success);}
+  .stat-value.danger{color:var(--danger);}
+  .stat-value.warning{color:var(--warning);}
+
+  .chart-area{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;}
+  .chart-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;}
+  .chart-box canvas{width:100%!important;height:auto!important;}
+
+  .rank-table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;}
+  .rank-table thead th{padding:12px 16px;text-align:left;font-weight:600;color:var(--fg-muted);font-size:12px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border);background:var(--bg);}
+  .rank-table tbody td{padding:10px 16px;border-bottom:1px solid rgba(14,165,233,0.06);}
+  .rank-table tbody tr:hover{background:var(--accent-soft);}
+  .rank-num{font-weight:700;color:var(--accent);}
+
+  .sheet-info{padding:12px 16px;background:var(--accent-soft);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--accent);margin-bottom:12px;display:none;align-items:center;gap:8px;}
+  .sheet-info.show{display:flex;}
+
+  @media(max-width:640px){.chart-area{grid-template-columns:1fr;}.input-row{flex-direction:column;align-items:stretch;}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header class="page-header">
+    <h1><i class="fa-solid fa-chart-column" style="color:var(--accent)"></i> 成绩统计</h1>
+    <p>快速录入或导入成绩，自动计算均分、排名与分布</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-file-import"></i> 导入 Excel 文件</div>
+    <div class="import-area" id="importArea">
+      <i class="fa-solid fa-cloud-arrow-up"></i>
+      <p>点击选择文件 或 拖拽文件到此处</p>
+      <p class="hint">支持 .xlsx / .xls / .csv 格式，自动识别标题行</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    </div>
+    <div class="sheet-info" id="sheetInfo"><i class="fa-solid fa-circle-check"></i><span id="sheetInfoText"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-pen-to-square"></i> 手动录入成绩</div>
+    <textarea id="scoreInput" placeholder="每行输入 姓名 成绩（空格或逗号分隔），例如：&#10;张三 85&#10;李四 92&#10;王五 78"></textarea>
+    <div class="input-row" style="margin-top:12px;">
+      <button class="btn btn-primary" id="btnAnalyze"><i class="fa-solid fa-chart-simple"></i> 开始分析</button>
+      <button class="btn btn-outline" id="btnClear"><i class="fa-solid fa-trash"></i> 清空</button>
+      <span class="input-hint" id="inputHint"></span>
+    </div>
+  </div>
+
+  <div id="results" style="display:none;">
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-chart-bar"></i> 成绩分布</div>
+      <div class="chart-area">
+        <div class="chart-box"><canvas id="barChart"></canvas></div>
+        <div class="chart-box"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-ranking-star"></i> 排名列表</div>
+      <div style="overflow-x:auto;">
+        <table class="rank-table">
+          <thead><tr><th>排名</th><th>姓名</th><th>成绩</th><th>等级</th></tr></thead>
+          <tbody id="rankBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const scoreInput = document.getElementById('scoreInput');
+const btnAnalyze = document.getElementById('btnAnalyze');
+const btnClear = document.getElementById('btnClear');
+const results = document.getElementById('results');
+const inputHint = document.getElementById('inputHint');
+const importArea = document.getElementById('importArea');
+const fileInput = document.getElementById('fileInput');
+const sheetInfo = document.getElementById('sheetInfo');
+const sheetInfoText = document.getElementById('sheetInfoText');
+let barChartInst = null, pieChartInst = null;
+
+function parseScores() {
+  const lines = scoreInput.value.trim().split('\n');
+  const data = [];
+  for (const line of lines) {
+    const parts = line.trim().split(/[\s,，]+/);
+    if (parts.length >= 2) {
+      const name = parts[0];
+      const score = parseFloat(parts[1]);
+      if (!isNaN(score) && score >= 0) data.push({ name, score });
+    }
+  }
+  return data;
+}
+
+function gradeOf(s) {
+  if (s >= 90) return '优秀';
+  if (s >= 80) return '良好';
+  if (s >= 70) return '中等';
+  if (s >= 60) return '及格';
+  return '不及格';
+}
+
+function gradeColor(g) {
+  const map = { '优秀':'success','良好':'accent','中等':'warning','及格':'','不及格':'danger' };
+  return map[g] || '';
+}
+
+function analyze(data) {
+  if (data.length === 0) { inputHint.textContent = '请输入有效成绩'; return; }
+  inputHint.textContent = `共 ${data.length} 条记录`;
+  results.style.display = '';
+
+  data.sort((a,b) => b.score - a.score);
+  const scores = data.map(d => d.score);
+  const sum = scores.reduce((a,b) => a+b, 0);
+  const avg = sum / scores.length;
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  const sorted = [...scores].sort((a,b) => a-b);
+  const median = sorted.length % 2 === 0 ? (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2 : sorted[Math.floor(sorted.length/2)];
+  const passRate = (scores.filter(s => s >= 60).length / scores.length * 100).toFixed(1);
+  const excellentRate = (scores.filter(s => s >= 90).length / scores.length * 100).toFixed(1);
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">平均分</div><div class="stat-value accent">${avg.toFixed(1)}</div></div>
+    <div class="stat-card"><div class="stat-label">最高分</div><div class="stat-value success">${max}</div></div>
+    <div class="stat-card"><div class="stat-label">最低分</div><div class="stat-value danger">${min}</div></div>
+    <div class="stat-card"><div class="stat-label">中位数</div><div class="stat-value">${median}</div></div>
+    <div class="stat-card"><div class="stat-label">及格率</div><div class="stat-value warning">${passRate}%</div></div>
+    <div class="stat-card"><div class="stat-label">优秀率</div><div class="stat-value success">${excellentRate}%</div></div>
+  `;
+
+  const ranges = ['0-59','60-69','70-79','80-89','90-100'];
+  const counts = [0,0,0,0,0];
+  scores.forEach(s => {
+    if (s < 60) counts[0]++;
+    else if (s < 70) counts[1]++;
+    else if (s < 80) counts[2]++;
+    else if (s < 90) counts[3]++;
+    else counts[4]++;
+  });
+
+  if (barChartInst) barChartInst.destroy();
+  if (pieChartInst) pieChartInst.destroy();
+
+  barChartInst = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: ranges,
+      datasets: [{ label: '人数', data: counts, backgroundColor: ['#f56565','#f6ad55','#48bb78','#0ea5e9','#8b5cf6'], borderRadius: 6 }]
+    },
+    options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }
+  });
+
+  pieChartInst = new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ranges,
+      datasets: [{ data: counts, backgroundColor: ['#f56565','#f6ad55','#48bb78','#0ea5e9','#8b5cf6'], borderWidth: 0 }]
+    },
+    options: { responsive:true, plugins:{legend:{position:'bottom',labels:{font:{size:12}}}} }
+  });
+
+  document.getElementById('rankBody').innerHTML = data.map((d, i) => {
+    const g = gradeOf(d.score);
+    const gc = gradeColor(g);
+    return `<tr>
+      <td class="rank-num">${i+1}</td>
+      <td>${d.name}</td>
+      <td>${d.score}</td>
+      <td><span style="color:var(--${gc||'fg-muted'})">${g}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function processWorkbook(workbook) {
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  if (raw.length === 0) { inputHint.textContent = '文件为空'; return; }
+
+  let nameCol = -1, scoreCol = -1;
+  const header = raw[0].map(v => String(v || '').trim().toLowerCase());
+
+  for (let i = 0; i < header.length; i++) {
+    const h = header[i];
+    if (nameCol === -1 && (h.includes('姓名') || h.includes('名字') || h.includes('name') || h.includes('学生'))) {
+      nameCol = i;
+    }
+    if (scoreCol === -1 && (h.includes('成绩') || h.includes('分数') || h.includes('score') || h.includes('分'))) {
+      scoreCol = i;
+    }
+  }
+
+  if (nameCol === -1 && scoreCol === -1) {
+    if (header.length >= 2) { nameCol = 0; scoreCol = 1; }
+    else { inputHint.textContent = '无法识别列，请确保有"姓名"和"成绩"列'; return; }
+  } else if (nameCol === -1) {
+    nameCol = scoreCol === 0 ? 1 : 0;
+  } else if (scoreCol === -1) {
+    scoreCol = nameCol === 0 ? 1 : 0;
+  }
+
+  const lines = [];
+  for (let r = 1; r < raw.length; r++) {
+    const row = raw[r];
+    const name = String(row[nameCol] || '').trim();
+    const score = parseFloat(row[scoreCol]);
+    if (name && !isNaN(score)) lines.push(`${name} ${score}`);
+  }
+
+  scoreInput.value = lines.join('\n');
+  sheetInfo.classList.add('show');
+  sheetInfoText.textContent = `已导入「${sheetName}」，识别到 ${lines.length} 条数据（姓名列: ${String.fromCharCode(65+nameCol)}，成绩列: ${String.fromCharCode(65+scoreCol)}）`;
+  analyze(parseScores());
+}
+
+importArea.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    processWorkbook(workbook);
+  };
+  reader.readAsArrayBuffer(file);
+  fileInput.value = '';
+});
+
+importArea.addEventListener('dragover', e => { e.preventDefault(); importArea.classList.add('dragover'); });
+importArea.addEventListener('dragleave', () => { importArea.classList.remove('dragover'); });
+importArea.addEventListener('drop', e => {
+  e.preventDefault();
+  importArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    processWorkbook(workbook);
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+btnAnalyze.addEventListener('click', () => analyze(parseScores()));
+btnClear.addEventListener('click', () => {
+  scoreInput.value = '';
+  results.style.display = 'none';
+  sheetInfo.classList.remove('show');
+  inputHint.textContent = '';
+});
+</script>
+</body>
+</html>

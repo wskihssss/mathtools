@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随机点名</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg:#f5f7fa;--card:#fff;--fg:#2d3748;--fg-muted:#718096;
+    --accent:#eab308;--accent-glow:rgba(234,179,8,0.15);--accent-soft:rgba(234,179,8,0.08);
+    --border:rgba(234,179,8,0.12);--border-strong:rgba(234,179,8,0.25);
+    --success:#48bb78;--danger:#f56565;
+    --radius:14px;--radius-sm:8px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;}
+  body::before{content:'';position:fixed;top:-30%;left:-15%;width:500px;height:500px;background:radial-gradient(circle,rgba(234,179,8,0.06) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+  .page-header{text-align:center;margin-bottom:32px;}
+  .page-header h1{font-size:32px;font-weight:900;}
+  .page-header h1 span{color:var(--accent);}
+  .page-header p{font-size:14px;color:var(--fg-muted);margin-top:8px;}
+
+  .main-area{width:100%;max-width:640px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.04);}
+  .card-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title i{color:var(--accent);}
+
+  .import-area{
+    border:2px dashed var(--border);border-radius:var(--radius-sm);padding:24px;
+    text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:12px;
+  }
+  .import-area:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .import-area.dragover{border-color:var(--accent);background:var(--accent-soft);}
+  .import-area i{font-size:28px;color:var(--accent);opacity:0.5;margin-bottom:6px;display:block;}
+  .import-area p{font-size:13px;color:var(--fg-muted);}
+  .import-area .hint{font-size:11px;color:var(--fg-muted);margin-top:4px;opacity:0.7;}
+  .import-area input{display:none;}
+
+  .sheet-info{padding:10px 14px;background:var(--accent-soft);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--accent);margin-bottom:12px;display:none;align-items:center;gap:6px;}
+  .sheet-info.show{display:flex;}
+
+  textarea{width:100%;height:100px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;font-family:inherit;color:var(--fg);resize:vertical;outline:none;background:var(--bg);}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  textarea::placeholder{color:rgba(113,128,150,0.5);}
+
+  .info-bar{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;}
+  .info-item{font-size:13px;color:var(--fg-muted);display:flex;align-items:center;gap:4px;}
+  .info-item i{font-size:11px;color:var(--accent);}
+
+  .option-row{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;}
+  .option-label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg-muted);cursor:pointer;}
+  .option-label input{accent-color:var(--accent);}
+
+  .display-card{
+    background:var(--card);border:2px solid var(--border);border-radius:var(--radius);
+    padding:48px 24px;text-align:center;margin-bottom:24px;
+    min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:border-color 0.3s;
+  }
+  .display-card.rolling{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow);}
+  .display-card.picked{border-color:var(--success);box-shadow:0 0 30px rgba(72,187,120,0.15);}
+
+  .name-display{font-size:64px;font-weight:900;min-height:80px;display:flex;align-items:center;justify-content:center;}
+  .name-display.rolling-anim{animation: nameShuffle 0.08s ease-in-out infinite;}
+  @keyframes nameShuffle{0%{opacity:0.6;transform:translateY(-2px);}100%{opacity:1;transform:translateY(2px);}}
+
+  .roll-count{font-size:13px;color:var(--fg-muted);margin-top:8px;}
+  .btn-row{display:flex;gap:12px;justify-content:center;margin-bottom:24px;}
+  .roll-btn{
+    padding:16px 48px;border:none;border-radius:var(--radius-sm);
+    font-size:18px;font-weight:700;font-family:inherit;cursor:pointer;
+    transition:all 0.2s;display:flex;align-items:center;gap:8px;
+  }
+  .roll-btn.primary{background:var(--accent);color:#fff;box-shadow:0 4px 15px rgba(234,179,8,0.3);}
+  .roll-btn.primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(234,179,8,0.4);}
+  .roll-btn.secondary{background:var(--card);border:1px solid var(--border);color:var(--fg-muted);}
+  .roll-btn.secondary:hover{border-color:var(--accent);color:var(--accent);}
+  .roll-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important;}
+
+  .history-card{max-height:240px;overflow-y:auto;}
+  .history-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .history-tag{
+    padding:6px 14px;border-radius:100px;font-size:13px;font-weight:500;
+    background:var(--accent-soft);color:var(--accent);border:1px solid var(--border);
+  }
+  .empty-hint{text-align:center;color:var(--fg-muted);font-size:13px;padding:20px;}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1><i class="fa-solid fa-dice" style="color:var(--accent)"></i> 随机点名</h1>
+  <p>导入学生名单，课堂随机抽取，支持不重复模式</p>
+</header>
+
+<div class="main-area">
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-file-import"></i> 导入 Excel 名单</div>
+    <div class="import-area" id="importArea">
+      <i class="fa-solid fa-cloud-arrow-up"></i>
+      <p>点击选择文件 或 拖拽文件到此处</p>
+      <p class="hint">支持 .xlsx / .xls / .csv，自动识别姓名列</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    </div>
+    <div class="sheet-info" id="sheetInfo"><i class="fa-solid fa-circle-check"></i><span id="sheetInfoText"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fa-solid fa-list"></i> 学生名单</div>
+    <textarea id="nameInput" placeholder="每行输入一个姓名，例如：&#10;张三&#10;李四&#10;王五"></textarea>
+    <div class="info-bar">
+      <span class="info-item"><i class="fa-solid fa-users"></i> 共 <strong id="totalCount">0</strong> 人</span>
+      <span class="info-item"><i class="fa-solid fa-check-circle"></i> 已抽 <strong id="pickedCount">0</strong> 人</span>
+      <span class="info-item"><i class="fa-solid fa-clock"></i> 剩余 <strong id="remainCount">0</strong> 人</span>
+    </div>
+    <div class="option-row">
+      <label class="option-label"><input type="checkbox" id="noRepeat" checked> 不重复抽取</label>
+    </div>
+  </div>
+
+  <div class="display-card" id="displayCard">
+    <div class="name-display" id="nameDisplay">?</div>
+    <div class="roll-count" id="rollHint">输入名单后开始点名</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="roll-btn secondary" id="btnReset"><i class="fa-solid fa-rotate-left"></i> 重置</button>
+    <button class="roll-btn primary" id="btnRoll"><i class="fa-solid fa-dice"></i> 开始点名</button>
+  </div>
+
+  <div class="card history-card">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> 抽取记录</div>
+    <div class="history-list" id="historyList">
+      <div class="empty-hint">暂无抽取记录</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const nameInput = document.getElementById('nameInput');
+const totalCount = document.getElementById('totalCount');
+const pickedCount = document.getElementById('pickedCount');
+const remainCount = document.getElementById('remainCount');
+const nameDisplay = document.getElementById('nameDisplay');
+const displayCard = document.getElementById('displayCard');
+const rollHint = document.getElementById('rollHint');
+const btnRoll = document.getElementById('btnRoll');
+const btnReset = document.getElementById('btnReset');
+const historyList = document.getElementById('historyList');
+const noRepeat = document.getElementById('noRepeat');
+const importArea = document.getElementById('importArea');
+const fileInput = document.getElementById('fileInput');
+const sheetInfo = document.getElementById('sheetInfo');
+const sheetInfoText = document.getElementById('sheetInfoText');
+
+let allNames = [];
+let pool = [];
+let picked = [];
+let rolling = false;
+let rollTimer = null;
+
+function parseNames() {
+  const text = nameInput.value.trim();
+  if (!text) return [];
+  return text.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+}
+
+function updateCounts() {
+  allNames = parseNames();
+  totalCount.textContent = allNames.length;
+  pool = noRepeat.checked ? allNames.filter(n => !picked.includes(n)) : [...allNames];
+  pickedCount.textContent = picked.length;
+  remainCount.textContent = pool.length;
+}
+
+function updateHistory() {
+  if (picked.length === 0) {
+    historyList.innerHTML = '<div class="empty-hint">暂无抽取记录</div>';
+    return;
+  }
+  historyList.innerHTML = picked.map(n => `<span class="history-tag">${n}</span>`).join('');
+}
+
+function processWorkbook(workbook) {
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  if (raw.length === 0) { return; }
+
+  let nameCol = -1;
+  const header = raw[0].map(v => String(v || '').trim().toLowerCase());
+
+  for (let i = 0; i < header.length; i++) {
+    const h = header[i];
+    if (h.includes('姓名') || h.includes('名字') || h.includes('name') || h.includes('学生')) {
+      nameCol = i; break;
+    }
+  }
+
+  if (nameCol === -1) {
+    nameCol = 0;
+  }
+
+  const names = [];
+  for (let r = 1; r < raw.length; r++) {
+    const name = String(raw[r][nameCol] || '').trim();
+    if (name) names.push(name);
+  }
+
+  if (names.length > 0) {
+    nameInput.value = names.join('\n');
+    sheetInfo.classList.add('show');
+    sheetInfoText.textContent = `已导入「${sheetName}」，识别到 ${names.length} 人（姓名列: ${String.fromCharCode(65+nameCol)}）`;
+    updateCounts();
+  }
+}
+
+importArea.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    processWorkbook(workbook);
+  };
+  reader.readAsArrayBuffer(file);
+  fileInput.value = '';
+});
+
+importArea.addEventListener('dragover', e => { e.preventDefault(); importArea.classList.add('dragover'); });
+importArea.addEventListener('dragleave', () => { importArea.classList.remove('dragover'); });
+importArea.addEventListener('drop', e => {
+  e.preventDefault();
+  importArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    processWorkbook(workbook);
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+nameInput.addEventListener('input', updateCounts);
+
+btnRoll.addEventListener('click', () => {
+  if (rolling) return;
+  updateCounts();
+  if (pool.length === 0) {
+    nameDisplay.textContent = '空';
+    rollHint.textContent = noRepeat.checked ? '所有人已抽完，请重置' : '请先输入名单';
+    return;
+  }
+  pool.sort(() => Math.random() - 0.5);
+
+  rolling = true;
+  displayCard.classList.add('rolling');
+  displayCard.classList.remove('picked');
+  nameDisplay.classList.add('rolling-anim');
+  btnRoll.disabled = true;
+
+  let count = 0;
+  const totalTicks = 20 + Math.floor(Math.random() * 15);
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+  rollTimer = setInterval(() => {
+    const temp = pool[Math.floor(Math.random() * pool.length)];
+    nameDisplay.textContent = temp;
+    count++;
+    if (count >= totalTicks) {
+      clearInterval(rollTimer);
+      nameDisplay.textContent = chosen;
+      nameDisplay.classList.remove('rolling-anim');
+      displayCard.classList.remove('rolling');
+      displayCard.classList.add('picked');
+      rolling = false;
+      btnRoll.disabled = false;
+
+      picked.push(chosen);
+      if (noRepeat.checked) pool = pool.filter(n => n !== chosen);
+      remainCount.textContent = pool.length;
+      pickedCount.textContent = picked.length;
+      updateHistory();
+      rollHint.textContent = `已抽取 ${picked.length} / ${allNames.length}`;
+    }
+  }, 60);
+});
+
+btnReset.addEventListener('click', () => {
+  picked = [];
+  pool = [];
+  updateCounts();
+  updateHistory();
+  nameDisplay.textContent = '?';
+  displayCard.classList.remove('rolling', 'picked');
+  rollHint.textContent = '输入名单后开始点名';
+});
+</script>
+</body>
+</html>
