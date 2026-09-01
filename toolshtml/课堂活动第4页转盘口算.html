@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>口算转盘 · 整十整百数乘一位数</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(180deg,#cfeaff,#eaf7ff 55%,#fff);min-height:100vh;padding:14px;color:#333}
+  header{text-align:center;margin-bottom:12px}
+  h1{font-size:clamp(22px,3.5vw,34px);color:#0b62a4}
+  .sub{color:#5b7c99;font-size:clamp(13px,1.6vw,17px);margin-top:4px}
+  .main{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:center;width:100%;margin:0 auto}
+  /* ---------- 转盘 ---------- */
+  .wheelWrap{position:relative;width:min(46vw,82vh);aspect-ratio:1;user-select:none;filter:drop-shadow(0 10px 18px rgba(60,40,10,.25))}
+  .wheelWrap svg{position:absolute;inset:0;width:100%;height:100%}
+  #outerSvg,#innerSvg{will-change:transform;transform-origin:50% 50%}
+  .hl{opacity:0;transition:opacity .35s}
+  .hl.on{opacity:.5}
+  #hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:23%;aspect-ratio:1;border-radius:50%;border:none;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#fff8ec,#ffe8c2 60%,#f0be7e);
+    box-shadow:0 4px 10px rgba(0,0,0,.28),inset 0 -5px 8px rgba(0,0,0,.08);
+    font-size:clamp(22px,4.2vw,56px);font-weight:800;color:#d35400;z-index:6}
+  #hub:active{transform:translate(-50%,-50%) scale(.93)}
+  /* ---------- 右侧面板 ---------- */
+  .panel{width:min(46vw,680px);display:flex;flex-direction:column;gap:12px}
+  .card{background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 4px 14px rgba(30,90,150,.13)}
+  .qrow{font-size:clamp(30px,5vw,44px);font-weight:800;display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap}
+  .qrow .box{display:inline-block;min-width:2.2em;text-align:center;color:#e67e22;border-bottom:4px solid #f5c98a}
+  #answer{width:2.8em;font:inherit;font-weight:800;text-align:center;border:none;border-bottom:4px solid #3498db;outline:none;background:#eef7ff;border-radius:8px 8px 0 0}
+  #answer:disabled{background:#f2f2f2}
+  .btn{border:none;border-radius:12px;padding:12px 18px;font-size:clamp(15px,1.8vw,19px);font-weight:700;cursor:pointer;color:#fff;transition:transform .1s}
+  .btn:active{transform:scale(.95)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.orange{background:#e67e22}.btn.blue{background:#3498db}.btn.green{background:#27ae60}.btn.gray{background:#95a5a6}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  #fb{min-height:1.6em;text-align:center;font-size:clamp(16px,2.2vw,22px);font-weight:700}
+  .ok{color:#1e9e4a}.no{color:#e74c3c}
+  #reveal{display:none;text-align:center}
+  #reveal .prod{font-size:clamp(26px,4vw,38px);font-weight:800;color:#8e44ad}
+  #reveal .method{margin-top:6px;font-size:clamp(14px,1.8vw,18px);color:#555;background:#fff8e6;border-radius:10px;padding:8px}
+  #score{text-align:center;font-size:clamp(15px,1.9vw,19px);font-weight:700;color:#0b62a4}
+  #status{text-align:center;color:#888;font-size:15px;min-height:1.4em}
+  .shake{animation:shake .45s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+  select{font-size:15px;padding:8px 10px;border-radius:10px;border:2px solid #b8d8f0;outline:none}
+  .mini{font-size:13px;color:#777;text-align:center}
+  .bubble{background:#eaf6ff;border:2px dashed #7fbde8;border-radius:14px;padding:10px 14px;font-size:clamp(14px,1.8vw,17px);color:#20618f}
+  #hist{display:none}
+  #histList span{display:inline-block;background:#f2f8ff;border-radius:8px;padding:2px 8px;margin:3px 4px 0 0;font-size:14px}
+  /* 撒花 */
+  .cf{position:fixed;top:-24px;width:12px;height:18px;z-index:99;pointer-events:none;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(112vh) rotate(720deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎡 口算转盘 · 整十、整百数乘一位数</h1>
+  <div class="sub">转动转盘，算出大小圆盘上两个对应数的积 ｜ 点击转盘中心或按【空格】开始</div>
+</header>
+
+<div class="main">
+  <div class="wheelWrap" id="wheelWrap">
+    <svg id="outerSvg" viewBox="-320 -320 640 640"></svg>
+    <svg id="innerSvg" viewBox="-320 -320 640 640"></svg>
+    <svg id="topSvg" viewBox="-320 -320 640 640">
+      <circle r="308" fill="none" stroke="#cf9057" stroke-width="12"/>
+      <circle r="204" fill="none" stroke="#cf9057" stroke-width="5"/>
+      <circle r="118" fill="none" stroke="#cf9057" stroke-width="5"/>
+      <polygon points="-26,-318 26,-318 0,-260" fill="#e74c3c" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+    </svg>
+    <button id="hub">转</button>
+  </div>
+
+  <div class="panel">
+    <div class="card qcard" id="qcard">
+      <div class="qrow">
+        <span class="box" id="qO">—</span> × <span class="box" id="qI">—</span> = <input id="answer" type="number" inputmode="numeric" disabled placeholder="？">
+      </div>
+      <div id="fb"></div>
+      <div id="reveal">
+        <div class="prod" id="prod"></div>
+        <div class="method" id="method"></div>
+      </div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn orange" id="spinBtn">🎡 转动转盘（空格）</button>
+      <button class="btn blue" id="checkBtn" disabled>✅ 提交答案</button>
+      <button class="btn green" id="revealBtn" disabled>👀 看答案</button>
+      <button class="btn gray" id="readBtn" disabled>🔊 读题</button>
+    </div>
+
+    <div class="card btnrow">
+      <label>模式：
+        <select id="mode">
+          <option value="sync">同步转（课本固定对应）</option>
+          <option value="rand">随机转（内外独立，题目更多）</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="autoRead" checked> 自动读题</label>
+      <button class="btn gray" id="sndBtn">🔊 音效</button>
+      <button class="btn gray" id="fsBtn">⛶ 全屏</button>
+    </div>
+
+    <div class="card" id="score">答对 0 / 0　　连对 ⭐ × 0</div>
+    <div id="status">准备好了吗？</div>
+
+    <div class="bubble">👧 <b>想一想：</b>怎样口算整十、整百数乘一位数？——先把整十、整百数看作<b>几个十、几个百</b>，先算非零部分，再在末尾添上 0。</div>
+
+    <div class="card" id="hist"><b>最近记录：</b><div id="histList"></div></div>
+  </div>
+</div>
+
+<script>
+/* ================= 数据 ================= */
+const OUTER=[900,40,800,60,300,700,50,200];        // 顺时针，从正上方开始
+const INNER=[8,9,3,6,5,4,7,2];
+const OC=['#b9b5e6','#bfe3c4','#f6edb2','#cdb7e2','#aed7ec','#cfe3ae','#f7cfc6','#f7e6ac'];
+const IC=['#cfe7f7','#f6e9b5','#f4d8ce','#d9ecd8','#e3d3f0','#f8e4c9','#d6e8f5','#f0dcf0'];
+
+/* ================= 画转盘 ================= */
+function polar(r,deg){const a=deg*Math.PI/180;return{x:r*Math.sin(a),y:-r*Math.cos(a)};}
+function secPath(r1,r2,a1,a2){
+  const p1=polar(r2,a1),p2=polar(r2,a2),p3=polar(r1,a2),p4=polar(r1,a1);
+  return `M ${p1.x} ${p1.y} A ${r2} ${r2} 0 0 1 ${p2.x} ${p2.y} L ${p3.x} ${p3.y} A ${r1} ${r1} 0 0 0 ${p4.x} ${p4.y} Z`;
+}
+function ringSVG(rIn,rOut,nums,colors,rLab,fs){
+  let s='';
+  for(let i=0;i<8;i++){
+    const a1=i*45-22.5,a2=i*45+22.5;
+    s+=`<path d="${secPath(rIn,rOut,a1,a2)}" fill="${colors[i]}" stroke="#8a6a4a" stroke-width="2"/>`;
+  }
+  for(let i=0;i<8;i++){
+    s+=`<text transform="rotate(${i*45})" x="0" y="${-rLab}" text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="700" fill="#3a2a1a" pointer-events="none">${nums[i]}</text>`;
+  }
+  return s;
+}
+const OUTER_D=[],INNER_D=[];
+for(let i=0;i<8;i++){OUTER_D[i]=secPath(210,300,i*45-22.5,i*45+22.5);INNER_D[i]=secPath(118,200,i*45-22.5,i*45+22.5);}
+document.getElementById('outerSvg').innerHTML=
+  ringSVG(210,300,OUTER,OC,257,44)+
+  `<path id="outerHL" class="hl" d="" fill="#ff9800" pointer-events="none"/>`;
+document.getElementById('innerSvg').innerHTML=
+  `<circle r="120" fill="#f8ecd8"/>`+
+  ringSVG(118,200,INNER,IC,160,40)+
+  `<path id="innerHL" class="hl" d="" fill="#ff9800" pointer-events="none"/>`;
+document.getElementById('outerSvg').style.transform='rotate(0deg)';
+document.getElementById('innerSvg').style.transform='rotate(0deg)';
+
+/* ================= 元素 ================= */
+const $=id=>document.getElementById(id);
+const outerSvg=$('outerSvg'),innerSvg=$('innerSvg'),outerHL=$('outerHL'),innerHL=$('innerHL');
+const qO=$('qO'),qI=$('qI'),answer=$('answer'),fb=$('fb'),reveal=$('reveal'),prod=$('prod'),method=$('method');
+const spinBtn=$('spinBtn'),checkBtn=$('checkBtn'),revealBtn=$('revealBtn'),readBtn=$('readBtn');
+const statusEl=$('status'),scoreEl=$('score'),histCard=$('hist'),histList=$('histList');
+
+/* ================= 状态 ================= */
+let curO=0,curI=0,spinning=false,landed=null;
+let score={ok:0,total:0,streak:0},histArr=[];
+let muted=false;
+
+/* ================= 声音 ================= */
+let actx=null;
+function ac(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();return actx;}
+function beep(f,d,type='square',g=.15,when=0){
+  if(muted)return;
+  try{const c=ac(),o=c.createOscillator(),gn=c.createGain();
+    o.type=type;o.frequency.value=f;o.connect(gn);gn.connect(c.destination);
+    const t=c.currentTime+when;o.start(t);
+    gn.gain.setValueAtTime(g,t);gn.gain.exponentialRampToValueAtTime(.001,t+d);o.stop(t+d);
+  }catch(e){}
+}
+const sTick=()=>beep(900,.04,'square',.06);
+const sGood=()=>{beep(660,.15,'triangle',.22);beep(880,.3,'triangle',.22,.13);};
+const sBad =()=>beep(220,.3,'sawtooth',.12);
+function speak(t){
+  if(muted||!('speechSynthesis' in window))return;
+  const u=new SpeechSynthesisUtterance(t);u.lang='zh-CN';u.rate=.9;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+
+/* ================= 嘀嗒声（跟随转动） ================= */
+let tickOn=false,lastIdx=null;
+function angleOf(el){
+  const tr=getComputedStyle(el).transform;if(!tr||tr==='none')return 0;
+  try{const m=new DOMMatrixReadOnly(tr);return Math.atan2(m.b,m.a)*180/Math.PI;}catch(e){return 0;}
+}
+function tickLoop(){
+  if(!tickOn)return;
+  const a=((angleOf(outerSvg)%360)+360)%360;
+  const idx=Math.floor(a/45);
+  if(idx!==lastIdx){sTick();lastIdx=idx;}
+  requestAnimationFrame(tickLoop);
+}
+
+/* ================= 转动 ================= */
+function newRot(cur,t){
+  const base=(360-t*45)%360;
+  const c=((cur%360)+360)%360;
+  return cur+360*5+((base-c+360)%360);
+}
+const rand8=()=>Math.floor(Math.random()*8);
+
+function spin(){
+  if(spinning)return;
+  spinning=true;landed=null;
+  outerHL.classList.remove('on');innerHL.classList.remove('on');
+  reveal.style.display='none';fb.textContent='';
+  qO.textContent='？';qI.textContent='？';answer.value='';answer.disabled=true;
+  checkBtn.disabled=true;revealBtn.disabled=true;readBtn.disabled=true;spinBtn.disabled=true;
+  statusEl.textContent='转盘转动中……';
+  try{ac();}catch(e){}
+
+  const sync=$('mode').value==='sync';
+  const tO=rand8(),tI=sync?tO:rand8();
+  curO=newRot(curO,tO);curI=newRot(curI,tI);
+  outerSvg.style.transition='transform 4s cubic-bezier(.15,.85,.25,1)';
+  innerSvg.style.transition='transform 4.35s cubic-bezier(.15,.85,.25,1)';
+  outerSvg.style.transform=`rotate(${curO}deg)`;
+  innerSvg.style.transform=`rotate(${curI}deg)`;
+  tickOn=true;lastIdx=null;requestAnimationFrame(tickLoop);
+
+  setTimeout(()=>{
+    tickOn=false;spinning=false;
+    landed={o:OUTER[tO],i:INNER[tI],tO,tI};
+    outerHL.setAttribute('d',OUTER_D[tO]);outerHL.classList.add('on');
+    innerHL.setAttribute('d',INNER_D[tI]);innerHL.classList.add('on');
+    qO.textContent=landed.o;qI.textContent=landed.i;
+    answer.disabled=false;answer.focus();
+    checkBtn.disabled=false;revealBtn.disabled=false;readBtn.disabled=false;spinBtn.disabled=false;
+    statusEl.textContent='请口算：'+landed.o+' × '+landed.i+' = ？';
+    if($('autoRead').checked)speak(`${landed.o} 乘 ${landed.i} 等于多少？`);
+  },4500);
+}
+
+/* ================= 口算方法 ================= */
+function lead0(n){let t=n,z=0;while(t%10===0&&t>0){t/=10;z++;}return{t,z};}
+function methodText(o,i){
+  const {t,z}=lead0(o);
+  return `口算方法：先算 ${t} × ${i} = ${t*i}，${o} 的末尾有 ${z} 个 0，再添上 ${z} 个 0，得 ${o*i}。`;
+}
+
+/* ================= 判答案 ================= */
+const PRAISE=['太棒了！🎉','回答正确！👏','你真聪明！💯','完全正确！🌟','好厉害！🚀'];
+const ENCOUR=['再想一想，可以用口算方法哦～','差一点点，再试试！','别急，先算非零部分，再添 0～'];
+function addHist(txt,ok){
+  histArr.unshift({txt,ok});histArr=histArr.slice(0,8);
+  histCard.style.display='block';
+  histList.innerHTML=histArr.map(h=>`<span>${h.txt} ${h.ok?'✅':'❌'}</span>`).join('');
+}
+function renderScore(){scoreEl.textContent=`答对 ${score.ok} / ${score.total}　　连对 ⭐ × ${score.streak}`;}
+function check(){
+  if(!landed||spinning)return;
+  const v=parseInt(answer.value,10);
+  if(isNaN(v)){fb.innerHTML='<span class="no">请先输入答案哦～</span>';return;}
+  const right=landed.o*landed.i;
+  score.total++;
+  if(v===right){
+    score.ok++;score.streak++;
+    fb.innerHTML='<span class="ok">'+PRAISE[Math.floor(Math.random()*PRAISE.length)]+'</span>';
+    sGood();confetti();speak(`答对了，${right}`);
+    addHist(`${landed.o}×${landed.i}=${right}`,true);
+    showReveal();answer.disabled=true;checkBtn.disabled=true;
+  }else{
+    score.streak=0;
+    const {t}=lead0(landed.o);
+    fb.innerHTML=`<span class="no">${ENCOUR[Math.floor(Math.random()*ENCOUR.length)]}</span><br><span class="mini">提示：先算 ${t} × ${landed.i} = ${t*landed.i}</span>`;
+    sBad();$('qcard').classList.remove('shake');void $('qcard').offsetWidth;$('qcard').classList.add('shake');
+    addHist(`${landed.o}×${landed.i}=${right}`,false);
+  }
+  renderScore();
+}
+function showReveal(){
+  if(!landed)return;
+  const right=landed.o*landed.i;
+  prod.textContent=`${landed.o} × ${landed.i} = ${right}`;
+  method.textContent=methodText(landed.o,landed.i);
+  reveal.style.display='block';
+}
+
+/* ================= 撒花 ================= */
+function confetti(){
+  const colors=['#f39c12','#e74c3c','#2ecc71','#3498db','#9b59b6','#f1c40f','#e67e22'];
+  for(let k=0;k<60;k++){
+    const d=document.createElement('div');d.className='cf';
+    d.style.left=Math.random()*100+'vw';
+    d.style.background=colors[k%colors.length];
+    d.style.animationDuration=(2+Math.random()*1.6)+'s';
+    d.style.animationDelay=(Math.random()*.35)+'s';
+    document.body.appendChild(d);setTimeout(()=>d.remove(),4200);
+  }
+}
+
+/* ================= 事件 ================= */
+spinBtn.onclick=spin;
+$('hub').onclick=spin;
+checkBtn.onclick=check;
+revealBtn.onclick=showReveal;
+readBtn.onclick=()=>landed&&speak(`${landed.o} 乘 ${landed.i} 等于多少？`);
+answer.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&e.target.tagName!=='INPUT'&&e.target.tagName!=='SELECT'){e.preventDefault();spin();}
+});
+$('sndBtn').onclick=function(){muted=!muted;this.textContent=muted?'🔇 静音':'🔊 音效';if(muted)speechSynthesis.cancel();};
+$('fsBtn').onclick=()=>{
+  if(document.fullscreenElement)document.exitFullscreen();
+  else document.documentElement.requestFullscreen();
+};
+</script>
+</body>
+</html>
